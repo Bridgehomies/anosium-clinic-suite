@@ -11,11 +11,13 @@ import {
   LogOut,
   ChevronLeft,
   Menu,
+  Shield,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 
 const navigation = [
+  { name: 'Super Admin', href: '/super-admin', icon: Shield },
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Patients', href: '/patients', icon: Users },
   { name: 'Doctors', href: '/doctors', icon: Stethoscope },
