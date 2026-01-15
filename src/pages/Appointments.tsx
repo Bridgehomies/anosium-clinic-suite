@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, ChevronLeft, ChevronRight, Clock, User, Stethoscope } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Clock, User, Stethoscope, X } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 
 const appointments = [
@@ -177,12 +177,15 @@ const Appointments = () => {
                     </span>
                   </td>
                   <td>
-                    <div className="flex gap-2">
-                      <button className="text-sm text-secondary hover:underline">
+                    <div className="flex items-center gap-2">
+                      <button className="inline-flex items-center justify-center h-8 px-3 rounded-lg bg-brand-teal/10 text-brand-teal hover:bg-brand-teal/20 transition-colors text-xs font-medium">
                         Edit
                       </button>
-                      <button className="text-sm text-destructive hover:underline">
-                        Cancel
+                      <button className="inline-flex items-center justify-center h-8 px-3 rounded-lg bg-brand-navy/10 text-brand-navy hover:bg-brand-navy/20 transition-colors text-xs font-medium">
+                        Reschedule
+                      </button>
+                      <button className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors">
+                        <X size={14} />
                       </button>
                     </div>
                   </td>

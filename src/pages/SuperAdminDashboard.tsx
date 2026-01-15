@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { 
   DollarSign, 
   TrendingUp, 
@@ -9,10 +10,10 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Receipt,
-  PiggyBank,
   BarChart3
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import PaymentCollectionModal from '@/components/payments/PaymentCollectionModal';
 import { cn } from '@/lib/utils';
 import {
   AreaChart,
@@ -27,7 +28,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
   Line,
 } from 'recharts';
 
@@ -61,7 +61,7 @@ const dailyRevenue = [
   { day: 'Sun', amount: 4100 },
 ];
 
-const outstandingPayments = [
+const initialOutstandingPayments = [
   { id: 1, patient: 'John Anderson', amount: 2450, dueDate: '2024-01-20', status: 'overdue' },
   { id: 2, patient: 'Sarah Mitchell', amount: 890, dueDate: '2024-01-25', status: 'pending' },
   { id: 3, patient: 'Robert Chen', amount: 3200, dueDate: '2024-01-28', status: 'pending' },
@@ -145,6 +145,19 @@ const ClinicalMetric = ({ title, value, icon: Icon }: ClinicalMetricProps) => (
 );
 
 const SuperAdminDashboard = () => {
+  const [outstandingPayments, setOutstandingPayments] = useState(initialOutstandingPayments);
+  const [selectedPayment, setSelectedPayment] = useState<typeof initialOutstandingPayments[0] | null>(null);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+
+  const handleCollectPayment = (payment: typeof initialOutstandingPayments[0]) => {
+    setSelectedPayment(payment);
+    setPaymentModalOpen(true);
+  };
+
+  const handlePaymentComplete = (paymentId: number) => {
+    setOutstandingPayments(prev => prev.filter(p => p.id !== paymentId));
+  };
+
   return (
     <DashboardLayout
       title="Super Admin Dashboard"
@@ -357,29 +370,44 @@ const SuperAdminDashboard = () => {
             </button>
           </div>
           <div className="space-y-3">
-            {outstandingPayments.map((payment) => (
-              <div key={payment.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className={cn(
-                    "w-2 h-2 rounded-full",
-                    payment.status === 'overdue' ? "bg-red-500" : "bg-amber-500"
-                  )} />
-                  <div>
-                    <p className="font-medium text-sm">{payment.patient}</p>
-                    <p className="text-xs text-muted-foreground">Due: {payment.dueDate}</p>
+            {outstandingPayments.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                <CreditCard className="w-10 h-10 mb-2 opacity-40" />
+                <p className="text-sm">All payments collected!</p>
+              </div>
+            ) : (
+              outstandingPayments.map((payment) => (
+                <div key={payment.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors group">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "w-2 h-2 rounded-full",
+                      payment.status === 'overdue' ? "bg-red-500" : "bg-amber-500"
+                    )} />
+                    <div>
+                      <p className="font-medium text-sm">{payment.patient}</p>
+                      <p className="text-xs text-muted-foreground">Due: {payment.dueDate}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="font-semibold text-brand-navy">${payment.amount.toLocaleString()}</p>
+                      <span className={cn(
+                        "text-xs font-medium px-2 py-0.5 rounded-full",
+                        payment.status === 'overdue' ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-600"
+                      )}>
+                        {payment.status}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleCollectPayment(payment)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity px-3 py-1.5 bg-brand-teal text-white text-xs font-medium rounded-lg hover:bg-brand-teal/90"
+                    >
+                      Collect
+                    </button>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold text-brand-navy">${payment.amount.toLocaleString()}</p>
-                  <span className={cn(
-                    "text-xs font-medium px-2 py-0.5 rounded-full",
-                    payment.status === 'overdue' ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-600"
-                  )}>
-                    {payment.status}
-                  </span>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -410,6 +438,14 @@ const SuperAdminDashboard = () => {
           <ClinicalMetric title="New Patients (MTD)" value="124" icon={Users} />
         </div>
       </div>
+
+      {/* Payment Collection Modal */}
+      <PaymentCollectionModal
+        payment={selectedPayment}
+        open={paymentModalOpen}
+        onOpenChange={setPaymentModalOpen}
+        onPaymentComplete={handlePaymentComplete}
+      />
     </DashboardLayout>
   );
 };
