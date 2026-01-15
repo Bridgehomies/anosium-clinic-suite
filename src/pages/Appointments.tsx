@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus, ChevronLeft, ChevronRight, Clock, User, Stethoscope, X } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import AppointmentBookingModal from '@/components/appointments/AppointmentBookingModal';
 
 const appointments = [
   {
@@ -70,6 +71,7 @@ const statusColors = {
 const Appointments = () => {
   const [view, setView] = useState<'list' | 'calendar'>('list');
   const [currentDate] = useState(new Date());
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
 
   return (
     <DashboardLayout title="Appointments" subtitle="Manage patient appointments">
@@ -114,7 +116,10 @@ const Appointments = () => {
               Calendar
             </button>
           </div>
-          <button className="btn-accent">
+          <button 
+            onClick={() => setBookingModalOpen(true)}
+            className="btn-accent"
+          >
             <Plus size={18} />
             New Appointment
           </button>
@@ -212,7 +217,7 @@ const Appointments = () => {
 
             {/* Appointments Column */}
             <div className="relative border-l border-border pl-4 space-y-4">
-              {timeSlots.map((time, index) => (
+              {timeSlots.map((time) => (
                 <div
                   key={time}
                   className="h-20 border-b border-border/50 relative"
@@ -251,6 +256,12 @@ const Appointments = () => {
           </div>
         </div>
       )}
+
+      {/* Booking Modal */}
+      <AppointmentBookingModal
+        open={bookingModalOpen}
+        onOpenChange={setBookingModalOpen}
+      />
     </DashboardLayout>
   );
 };

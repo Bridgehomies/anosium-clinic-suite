@@ -13,8 +13,8 @@ import {
   Menu,
   Shield,
 } from 'lucide-react';
-import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { useSidebarContext } from '@/contexts/SidebarContext';
 
 const navigation = [
   { name: 'Super Admin', href: '/super-admin', icon: Shield },
@@ -29,7 +29,7 @@ const navigation = [
 
 const Sidebar = () => {
   const location = useLocation();
-  const [collapsed, setCollapsed] = useState(false);
+  const { collapsed, toggle } = useSidebarContext();
 
   return (
     <aside
@@ -63,7 +63,7 @@ const Sidebar = () => {
 
         {/* Toggle Button */}
         <button
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={toggle}
           className="absolute -right-3 top-24 w-6 h-6 bg-sidebar-primary rounded-full flex items-center justify-center text-sidebar-primary-foreground shadow-lg hover:scale-110 transition-transform"
         >
           {collapsed ? <Menu size={12} /> : <ChevronLeft size={12} />}
