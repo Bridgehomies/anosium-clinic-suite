@@ -1,8 +1,30 @@
 import { useState } from 'react';
 import { Plus, Search, DollarSign, Clock, Tag, Edit, Trash2 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import AddServiceModal from '@/components/services/AddServiceModal';
+import { toast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
-const services = [
+interface Service {
+  id: number;
+  name: string;
+  category: string;
+  price: number;
+  duration: string;
+  description: string;
+  popular: boolean;
+}
+
+const initialServices: Service[] = [
   {
     id: 1,
     name: 'General Consultation',
@@ -62,14 +84,62 @@ const services = [
 const categories = ['All', 'General', 'Laboratory', 'Radiology', 'Cardiology', 'Rehabilitation', 'Dermatology'];
 
 const Services = () => {
+  const [services, setServices] = useState<Service[]>(initialServices);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [editMode, setEditMode] = useState(false);
 
   const filteredServices = services.filter((service) => {
     const matchesSearch = service.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = activeCategory === 'All' || service.category === activeCategory;
     return matchesSearch && matchesCategory;
   });
+
+  const handleAddService = (serviceData: any) => {
+    const newService: Service = {
+      id: services.length + 1,
+      name: serviceData.name,
+      category: serviceData.category,
+      price: Number(serviceData.price),
+      duration: serviceData.duration,
+      description: serviceData.description,
+      popular: serviceData.popular,
+    };
+    setServices([...services, newService]);
+  };
+
+  const handleDeleteService = () => {
+    if (selectedService) {
+      setServices(services.filter((s) => s.id !== selectedService.id));
+      toast({
+        title: 'Service Deleted',
+        description: `${selectedService.name} has been removed.`,
+      });
+      setDeleteDialogOpen(false);
+      setSelectedService(null);
+    }
+  };
+
+  const confirmDelete = (service: Service) => {
+    setSelectedService(service);
+    setDeleteDialogOpen(true);
+  };
+
+  const togglePopular = (service: Service) => {
+    setServices(services.map(s => 
+      s.id === service.id ? { ...s, popular: !s.popular } : s
+    ));
+    toast({
+      title: service.popular ? 'Removed from Popular' : 'Marked as Popular',
+      description: `${service.name} has been updated.`,
+    });
+  };
+
+  // Get unique categories from services for dynamic category list
+  const uniqueCategories = ['All', ...new Set(services.map(s => s.category))];
 
   return (
     <DashboardLayout title="Services" subtitle="Manage clinic services and pricing">
@@ -89,7 +159,7 @@ const Services = () => {
               className="input-modern pl-11"
             />
           </div>
-          <button className="btn-accent">
+          <button className="btn-accent" onClick={() => setAddModalOpen(true)}>
             <Plus size={18} />
             Add Service
           </button>
@@ -97,7 +167,7 @@ const Services = () => {
 
         {/* Category Filters */}
         <div className="flex flex-wrap gap-2">
-          {categories.map((category) => (
+          {uniqueCategories.map((category) => (
             <button
               key={category}
               onClick={() => setActiveCategory(category)}
@@ -153,17 +223,86 @@ const Services = () => {
             </div>
 
             <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button className="btn-outline flex-1 text-sm py-2">
-                <Edit size={14} />
-                Edit
+              <button 
+                className="btn-outline flex-1 text-sm py-2"
+                onClick={() => togglePopular(service)}
+              >
+                {service.popular ? 'Unmark Popular' : 'Mark Popular'}
               </button>
-              <button className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg border-2 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground transition-all">
+              <button className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 border-muted hover:bg-muted transition-all">
+                <Edit size={14} className="text-muted-foreground" />
+              </button>
+              <button 
+                onClick={() => confirmDelete(service)}
+                className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground transition-all"
+              >
                 <Trash2 size={14} />
               </button>
             </div>
           </div>
         ))}
       </div>
+
+      {filteredServices.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">No services found matching your criteria.</p>
+        </div>
+      )}
+
+      {/* Summary Stats */}
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="metric-card">
+          <p className="text-sm text-muted-foreground mb-2">Total Services</p>
+          <p className="text-3xl font-bold font-display text-foreground">
+            {services.length}
+          </p>
+        </div>
+        <div className="metric-card">
+          <p className="text-sm text-muted-foreground mb-2">Popular Services</p>
+          <p className="text-3xl font-bold font-display text-foreground">
+            {services.filter(s => s.popular).length}
+          </p>
+        </div>
+        <div className="metric-card">
+          <p className="text-sm text-muted-foreground mb-2">Avg. Price</p>
+          <p className="text-3xl font-bold font-display text-foreground">
+            ${Math.round(services.reduce((acc, s) => acc + s.price, 0) / services.length)}
+          </p>
+        </div>
+        <div className="metric-card">
+          <p className="text-sm text-muted-foreground mb-2">Categories</p>
+          <p className="text-3xl font-bold font-display text-foreground">
+            {new Set(services.map(s => s.category)).size}
+          </p>
+        </div>
+      </div>
+
+      {/* Modals */}
+      <AddServiceModal
+        open={addModalOpen}
+        onOpenChange={setAddModalOpen}
+        onAdd={handleAddService}
+      />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Service</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{selectedService?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteService}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 };
