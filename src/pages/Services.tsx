@@ -145,8 +145,8 @@ const Services = () => {
     <DashboardLayout title="Services" subtitle="Manage clinic services and pricing">
       {/* Actions Bar */}
       <div className="flex flex-col gap-4 mb-6 animate-fade-up">
-        <div className="flex flex-col sm:flex-row gap-4 justify-between">
-          <div className="relative flex-1 max-w-md">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-between items-stretch sm:items-center">
+          <div className="relative flex-1 w-full sm:max-w-md">
             <Search
               size={18}
               className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
@@ -156,22 +156,22 @@ const Services = () => {
               placeholder="Search services..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="input-modern pl-11"
+              className="input-modern pl-11 w-full"
             />
           </div>
-          <button className="btn-accent" onClick={() => setAddModalOpen(true)}>
+          <button className="btn-accent w-full sm:w-auto" onClick={() => setAddModalOpen(true)}>
             <Plus size={18} />
-            Add Service
+            <span>Add Service</span>
           </button>
         </div>
 
         {/* Category Filters */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 overflow-x-auto pb-1 -mx-1 px-1">
           {uniqueCategories.map((category) => (
             <button
               key={category}
               onClick={() => setActiveCategory(category)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+              className={`px-3 md:px-4 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 ${
                 activeCategory === category
                   ? 'bg-brand-navy text-white'
                   : 'bg-muted text-muted-foreground hover:bg-muted/80'
@@ -184,57 +184,58 @@ const Services = () => {
       </div>
 
       {/* Services Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 stagger-children">
         {filteredServices.map((service) => (
-          <div key={service.id} className="card-elevated p-6 group relative">
+          <div key={service.id} className="card-elevated p-4 md:p-6 group relative">
             {service.popular && (
-              <div className="absolute top-4 right-4">
+              <div className="absolute top-3 md:top-4 right-3 md:right-4">
                 <span className="px-2 py-1 bg-secondary/10 text-secondary text-xs font-medium rounded-full">
                   Popular
                 </span>
               </div>
             )}
 
-            <div className="flex items-center gap-2 mb-3">
-              <Tag size={16} className="text-secondary" />
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            <div className="flex items-center gap-2 mb-2 md:mb-3">
+              <Tag size={14} className="text-secondary flex-shrink-0" />
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide truncate">
                 {service.category}
               </span>
             </div>
 
-            <h3 className="font-display font-semibold text-lg text-foreground mb-2">
+            <h3 className="font-display font-semibold text-base md:text-lg text-foreground mb-1 md:mb-2 pr-16">
               {service.name}
             </h3>
-            <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+            <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4 line-clamp-2">
               {service.description}
             </p>
 
-            <div className="flex items-center gap-4 mb-4">
+            <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-4">
               <div className="flex items-center gap-1.5">
-                <DollarSign size={16} className="text-emerald-500" />
-                <span className="text-xl font-bold font-display text-foreground">
+                <DollarSign size={14} className="text-emerald-500 flex-shrink-0" />
+                <span className="text-lg md:text-xl font-bold font-display text-foreground">
                   ${service.price}
                 </span>
               </div>
               <div className="flex items-center gap-1.5 text-muted-foreground">
-                <Clock size={14} />
-                <span className="text-sm">{service.duration}</span>
+                <Clock size={12} className="flex-shrink-0" />
+                <span className="text-xs md:text-sm">{service.duration}</span>
               </div>
             </div>
 
-            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Actions - Always visible on mobile, hover on desktop */}
+            <div className="flex flex-wrap gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity pt-2 border-t border-border/50">
               <button 
-                className="btn-outline flex-1 text-sm py-2"
+                className="flex-1 min-w-0 text-xs md:text-sm py-2 px-2 md:px-3 rounded-lg border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-all truncate"
                 onClick={() => togglePopular(service)}
               >
-                {service.popular ? 'Unmark Popular' : 'Mark Popular'}
+                {service.popular ? 'Unmark' : 'Popular'}
               </button>
-              <button className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 border-muted hover:bg-muted transition-all">
+              <button className="flex items-center justify-center p-2 rounded-lg border-2 border-muted hover:bg-muted transition-all flex-shrink-0">
                 <Edit size={14} className="text-muted-foreground" />
               </button>
               <button 
                 onClick={() => confirmDelete(service)}
-                className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground transition-all"
+                className="flex items-center justify-center p-2 rounded-lg border-2 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground transition-all flex-shrink-0"
               >
                 <Trash2 size={14} />
               </button>
@@ -250,28 +251,28 @@ const Services = () => {
       )}
 
       {/* Summary Stats */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="mt-6 md:mt-8 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
         <div className="metric-card">
-          <p className="text-sm text-muted-foreground mb-2">Total Services</p>
-          <p className="text-3xl font-bold font-display text-foreground">
+          <p className="text-xs md:text-sm text-muted-foreground mb-1 md:mb-2">Total Services</p>
+          <p className="text-2xl md:text-3xl font-bold font-display text-foreground">
             {services.length}
           </p>
         </div>
         <div className="metric-card">
-          <p className="text-sm text-muted-foreground mb-2">Popular Services</p>
-          <p className="text-3xl font-bold font-display text-foreground">
+          <p className="text-xs md:text-sm text-muted-foreground mb-1 md:mb-2">Popular Services</p>
+          <p className="text-2xl md:text-3xl font-bold font-display text-foreground">
             {services.filter(s => s.popular).length}
           </p>
         </div>
         <div className="metric-card">
-          <p className="text-sm text-muted-foreground mb-2">Avg. Price</p>
-          <p className="text-3xl font-bold font-display text-foreground">
+          <p className="text-xs md:text-sm text-muted-foreground mb-1 md:mb-2">Avg. Price</p>
+          <p className="text-2xl md:text-3xl font-bold font-display text-foreground">
             ${Math.round(services.reduce((acc, s) => acc + s.price, 0) / services.length)}
           </p>
         </div>
         <div className="metric-card">
-          <p className="text-sm text-muted-foreground mb-2">Categories</p>
-          <p className="text-3xl font-bold font-display text-foreground">
+          <p className="text-xs md:text-sm text-muted-foreground mb-1 md:mb-2">Categories</p>
+          <p className="text-2xl md:text-3xl font-bold font-display text-foreground">
             {new Set(services.map(s => s.category)).size}
           </p>
         </div>

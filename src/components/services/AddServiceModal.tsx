@@ -125,41 +125,41 @@ const AddServiceModal = ({ open, onOpenChange, onAdd }: AddServiceModalProps) =>
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3 text-xl font-display">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-navy to-brand-teal flex items-center justify-center">
-              <Tag className="text-white" size={20} />
+      <DialogContent className="max-w-lg w-[95vw] sm:w-full max-h-[85vh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0">
+          <DialogTitle className="flex items-center gap-3 text-lg md:text-xl font-display">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-gradient-to-br from-brand-navy to-brand-teal flex items-center justify-center flex-shrink-0">
+              <Tag className="text-white" size={18} />
             </div>
             Add New Service
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 mt-4">
-          {/* Service Details */}
-          <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden mt-2">
+          {/* Scrollable form content */}
+          <div className="flex-1 overflow-y-auto space-y-4 px-1 py-2">
             <div className="space-y-2">
-              <Label htmlFor="name">Service Name *</Label>
+              <Label htmlFor="name" className="text-sm">Service Name *</Label>
               <Input
                 id="name"
                 placeholder="e.g., General Consultation"
                 value={formData.name}
                 onChange={(e) => handleChange('name', e.target.value)}
-                className={errors.name ? 'border-destructive' : ''}
+                className={`text-sm ${errors.name ? 'border-destructive' : ''}`}
               />
               {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
             </div>
 
             <div className="space-y-2">
-              <Label>Category *</Label>
+              <Label className="text-sm">Category *</Label>
               <Select
                 value={formData.category}
                 onValueChange={(value) => handleChange('category', value)}
               >
-                <SelectTrigger className={errors.category ? 'border-destructive' : ''}>
+                <SelectTrigger className={`text-sm ${errors.category ? 'border-destructive' : ''}`}>
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[100] bg-popover">
                   {categories.map((cat) => (
                     <SelectItem key={cat} value={cat}>
                       {cat}
@@ -170,34 +170,34 @@ const AddServiceModal = ({ open, onOpenChange, onAdd }: AddServiceModalProps) =>
               {errors.category && <p className="text-xs text-destructive">{errors.category}</p>}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="price">Price ($) *</Label>
+                <Label htmlFor="price" className="text-sm">Price ($) *</Label>
                 <div className="relative">
-                  <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <DollarSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="price"
                     type="number"
                     placeholder="75"
                     value={formData.price}
                     onChange={(e) => handleChange('price', e.target.value)}
-                    className={`pl-10 ${errors.price ? 'border-destructive' : ''}`}
+                    className={`pl-9 text-sm ${errors.price ? 'border-destructive' : ''}`}
                   />
                 </div>
                 {errors.price && <p className="text-xs text-destructive">{errors.price}</p>}
               </div>
 
               <div className="space-y-2">
-                <Label>Duration *</Label>
+                <Label className="text-sm">Duration *</Label>
                 <Select
                   value={formData.duration}
                   onValueChange={(value) => handleChange('duration', value)}
                 >
-                  <SelectTrigger className={errors.duration ? 'border-destructive' : ''}>
-                    <Clock size={16} className="mr-2 text-muted-foreground" />
+                  <SelectTrigger className={`text-sm ${errors.duration ? 'border-destructive' : ''}`}>
+                    <Clock size={14} className="mr-2 text-muted-foreground flex-shrink-0" />
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[100] bg-popover">
                     {durations.map((dur) => (
                       <SelectItem key={dur} value={dur}>
                         {dur}
@@ -210,25 +210,25 @@ const AddServiceModal = ({ open, onOpenChange, onAdd }: AddServiceModalProps) =>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description *</Label>
+              <Label htmlFor="description" className="text-sm">Description *</Label>
               <div className="relative">
-                <FileText size={16} className="absolute left-3 top-3 text-muted-foreground" />
+                <FileText size={14} className="absolute left-3 top-3 text-muted-foreground" />
                 <Textarea
                   id="description"
                   placeholder="Describe the service..."
                   value={formData.description}
                   onChange={(e) => handleChange('description', e.target.value)}
-                  className={`pl-10 min-h-[80px] ${errors.description ? 'border-destructive' : ''}`}
+                  className={`pl-9 min-h-[70px] text-sm ${errors.description ? 'border-destructive' : ''}`}
                 />
               </div>
               {errors.description && <p className="text-xs text-destructive">{errors.description}</p>}
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-xl">
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
               <div>
-                <Label htmlFor="popular" className="font-medium">Mark as Popular</Label>
-                <p className="text-sm text-muted-foreground">
-                  Display a "Popular" badge on this service
+                <Label htmlFor="popular" className="font-medium text-sm">Mark as Popular</Label>
+                <p className="text-xs text-muted-foreground">
+                  Display a "Popular" badge
                 </p>
               </div>
               <Switch
@@ -239,16 +239,16 @@ const AddServiceModal = ({ open, onOpenChange, onAdd }: AddServiceModalProps) =>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-4 border-t border-border">
+          {/* Fixed action buttons at bottom */}
+          <div className="flex-shrink-0 flex gap-2 md:gap-3 pt-4 mt-2 border-t border-border bg-background">
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="btn-ghost flex-1"
+              className="btn-ghost flex-1 text-sm"
             >
               Cancel
             </button>
-            <button type="submit" className="btn-accent flex-1">
+            <button type="submit" className="btn-accent flex-1 text-sm">
               Add Service
             </button>
           </div>
