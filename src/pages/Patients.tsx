@@ -1,10 +1,47 @@
 import { useState } from 'react';
-import { Plus, Search, Filter, MoreHorizontal, User, Phone, Mail, Calendar } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, User, Phone, Mail, Calendar, Edit, Trash2 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PatientProfileModal from '@/components/patients/PatientProfileModal';
 import AppointmentBookingModal from '@/components/appointments/AppointmentBookingModal';
+import AddPatientModal from '@/components/patients/AddPatientModal';
+import { toast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
-const patients = [
+interface Patient {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  dob: string;
+  bloodType: string;
+  allergies: string[];
+  emergencyContact: string;
+  insuranceProvider: string;
+  insuranceId: string;
+  lastVisit: string;
+  status: string;
+  totalVisits: number;
+  outstandingBalance: number;
+}
+
+const initialPatients: Patient[] = [
   {
     id: 1,
     name: 'Sarah Johnson',
@@ -93,18 +130,25 @@ const patients = [
 ];
 
 const Patients = () => {
+  const [patients, setPatients] = useState<Patient[]>(initialPatients);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedPatient, setSelectedPatient] = useState<typeof patients[0] | null>(null);
+  const [filterStatus, setFilterStatus] = useState<string>('All');
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [appointmentModalOpen, setAppointmentModalOpen] = useState(false);
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  const filteredPatients = patients.filter(
-    (patient) =>
+  const filteredPatients = patients.filter((patient) => {
+    const matchesSearch =
       patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      patient.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = filterStatus === 'All' || patient.status === filterStatus.toLowerCase();
+    return matchesSearch && matchesFilter;
+  });
 
-  const handleViewProfile = (patient: typeof patients[0]) => {
+  const handleViewProfile = (patient: Patient) => {
     setSelectedPatient(patient);
     setProfileModalOpen(true);
   };
@@ -112,6 +156,44 @@ const Patients = () => {
   const handleScheduleAppointment = () => {
     setProfileModalOpen(false);
     setAppointmentModalOpen(true);
+  };
+
+  const handleAddPatient = (patientData: any) => {
+    const newPatient: Patient = {
+      id: patients.length + 1,
+      name: patientData.name,
+      email: patientData.email,
+      phone: patientData.phone,
+      address: patientData.address,
+      dob: patientData.dob,
+      bloodType: patientData.bloodType,
+      allergies: patientData.allergies ? patientData.allergies.split(',').map((a: string) => a.trim()) : [],
+      emergencyContact: `${patientData.emergencyContact} - ${patientData.emergencyPhone}`,
+      insuranceProvider: patientData.insuranceProvider,
+      insuranceId: patientData.insuranceId,
+      lastVisit: new Date().toISOString().split('T')[0],
+      status: 'active',
+      totalVisits: 0,
+      outstandingBalance: 0,
+    };
+    setPatients([...patients, newPatient]);
+  };
+
+  const handleDeletePatient = () => {
+    if (selectedPatient) {
+      setPatients(patients.filter((p) => p.id !== selectedPatient.id));
+      toast({
+        title: 'Patient Removed',
+        description: `${selectedPatient.name} has been removed from records.`,
+      });
+      setDeleteDialogOpen(false);
+      setSelectedPatient(null);
+    }
+  };
+
+  const confirmDelete = (patient: Patient) => {
+    setSelectedPatient(patient);
+    setDeleteDialogOpen(true);
   };
 
   return (
@@ -132,16 +214,38 @@ const Patients = () => {
           />
         </div>
         <div className="flex gap-3">
-          <button className="btn-ghost">
+          <button 
+            className={`btn-ghost ${showFilters ? 'bg-muted' : ''}`}
+            onClick={() => setShowFilters(!showFilters)}
+          >
             <Filter size={18} />
             Filters
           </button>
-          <button className="btn-accent">
+          <button className="btn-accent" onClick={() => setAddModalOpen(true)}>
             <Plus size={18} />
             Add Patient
           </button>
         </div>
       </div>
+
+      {/* Filter Options */}
+      {showFilters && (
+        <div className="flex flex-wrap gap-2 mb-6 animate-fade-up">
+          {['All', 'Active', 'Pending', 'Inactive'].map((status) => (
+            <button
+              key={status}
+              onClick={() => setFilterStatus(status)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                filterStatus === status
+                  ? 'bg-brand-navy text-white'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }`}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Patients Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 stagger-children">
@@ -169,9 +273,38 @@ const Patients = () => {
                   </span>
                 </div>
               </div>
-              <button className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-muted rounded-lg">
-                <MoreHorizontal size={18} className="text-muted-foreground" />
-              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-muted rounded-lg">
+                    <MoreHorizontal size={18} className="text-muted-foreground" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleViewProfile(patient)}>
+                    <User size={14} className="mr-2" />
+                    View Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Edit size={14} className="mr-2" />
+                    Edit Patient
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {
+                    setSelectedPatient(patient);
+                    setAppointmentModalOpen(true);
+                  }}>
+                    <Calendar size={14} className="mr-2" />
+                    Book Appointment
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={() => confirmDelete(patient)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 size={14} className="mr-2" />
+                    Delete Patient
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             <div className="space-y-3 text-sm">
@@ -189,6 +322,14 @@ const Patients = () => {
               </div>
             </div>
 
+            {patient.outstandingBalance > 0 && (
+              <div className="mt-3 p-2 bg-destructive/10 rounded-lg">
+                <p className="text-sm text-destructive font-medium">
+                  Outstanding: ${patient.outstandingBalance}
+                </p>
+              </div>
+            )}
+
             <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
               <div>
                 <p className="text-2xl font-bold font-display text-foreground">
@@ -196,7 +337,7 @@ const Patients = () => {
                 </p>
                 <p className="text-xs text-muted-foreground">Total Visits</p>
               </div>
-              <button 
+              <button
                 onClick={() => handleViewProfile(patient)}
                 className="btn-outline text-sm py-2 px-4"
               >
@@ -206,6 +347,12 @@ const Patients = () => {
           </div>
         ))}
       </div>
+
+      {filteredPatients.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">No patients found matching your criteria.</p>
+        </div>
+      )}
 
       {/* Modals */}
       <PatientProfileModal
@@ -219,6 +366,32 @@ const Patients = () => {
         open={appointmentModalOpen}
         onOpenChange={setAppointmentModalOpen}
       />
+
+      <AddPatientModal
+        open={addModalOpen}
+        onOpenChange={setAddModalOpen}
+        onAdd={handleAddPatient}
+      />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Patient</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedPatient?.name}? This action cannot be undone and all associated records will be removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeletePatient}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 };

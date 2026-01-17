@@ -1,8 +1,33 @@
 import { useState } from 'react';
-import { Plus, Search, Filter, Star, Clock, Users } from 'lucide-react';
+import { Plus, Search, Filter, Star, Clock, Users, Edit, Trash2, Eye } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import AddDoctorModal from '@/components/doctors/AddDoctorModal';
+import { toast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
-const doctors = [
+interface Doctor {
+  id: number;
+  name: string;
+  specialization: string;
+  department: string;
+  email: string;
+  phone: string;
+  rating: number;
+  patients: number;
+  availability: string;
+  experience: string;
+}
+
+const initialDoctors: Doctor[] = [
   {
     id: 1,
     name: 'Dr. Michael Chen',
@@ -66,13 +91,55 @@ const doctors = [
 ];
 
 const Doctors = () => {
+  const [doctors, setDoctors] = useState<Doctor[]>(initialDoctors);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterAvailability, setFilterAvailability] = useState<string>('All');
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
-  const filteredDoctors = doctors.filter(
-    (doctor) =>
+  const filteredDoctors = doctors.filter((doctor) => {
+    const matchesSearch =
       doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doctor.specialization.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      doctor.specialization.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter =
+      filterAvailability === 'All' || doctor.availability === filterAvailability;
+    return matchesSearch && matchesFilter;
+  });
+
+  const handleAddDoctor = (doctorData: any) => {
+    const newDoctor: Doctor = {
+      id: doctors.length + 1,
+      name: doctorData.name,
+      specialization: doctorData.specialization,
+      department: doctorData.department,
+      email: doctorData.email,
+      phone: doctorData.phone,
+      rating: 5.0,
+      patients: 0,
+      availability: doctorData.availability,
+      experience: doctorData.experience,
+    };
+    setDoctors([...doctors, newDoctor]);
+  };
+
+  const handleDeleteDoctor = () => {
+    if (selectedDoctor) {
+      setDoctors(doctors.filter((d) => d.id !== selectedDoctor.id));
+      toast({
+        title: 'Doctor Removed',
+        description: `${selectedDoctor.name} has been removed.`,
+      });
+      setDeleteDialogOpen(false);
+      setSelectedDoctor(null);
+    }
+  };
+
+  const confirmDelete = (doctor: Doctor) => {
+    setSelectedDoctor(doctor);
+    setDeleteDialogOpen(true);
+  };
 
   return (
     <DashboardLayout title="Doctors" subtitle="Manage your medical staff">
@@ -92,25 +159,47 @@ const Doctors = () => {
           />
         </div>
         <div className="flex gap-3">
-          <button className="btn-ghost">
+          <button 
+            className={`btn-ghost ${showFilters ? 'bg-muted' : ''}`}
+            onClick={() => setShowFilters(!showFilters)}
+          >
             <Filter size={18} />
             Filters
           </button>
-          <button className="btn-accent">
+          <button className="btn-accent" onClick={() => setAddModalOpen(true)}>
             <Plus size={18} />
             Add Doctor
           </button>
         </div>
       </div>
 
+      {/* Filter Options */}
+      {showFilters && (
+        <div className="flex flex-wrap gap-2 mb-6 animate-fade-up">
+          {['All', 'Available', 'Busy', 'On Leave'].map((status) => (
+            <button
+              key={status}
+              onClick={() => setFilterAvailability(status)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                filterAvailability === status
+                  ? 'bg-brand-navy text-white'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }`}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Doctors Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 stagger-children">
         {filteredDoctors.map((doctor) => (
-          <div key={doctor.id} className="card-elevated p-6">
+          <div key={doctor.id} className="card-elevated p-6 group">
             <div className="flex items-start gap-5">
               <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-brand-navy to-brand-teal flex items-center justify-center flex-shrink-0">
                 <span className="text-white font-bold text-2xl">
-                  {doctor.name.split(' ').slice(1).map(n => n[0]).join('')}
+                  {doctor.name.split(' ').slice(1).map((n) => n[0]).join('')}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
@@ -152,11 +241,22 @@ const Doctors = () => {
                   </div>
                 </div>
 
-                <div className="flex gap-3 mt-5">
-                  <button className="btn-outline text-sm py-2 px-4 flex-1">
-                    View Profile
+                <div className="flex gap-2 mt-5">
+                  <button className="btn-outline text-sm py-2 px-3 flex items-center gap-2">
+                    <Eye size={14} />
+                    View
                   </button>
-                  <button className="btn-accent text-sm py-2 px-4 flex-1">
+                  <button className="btn-outline text-sm py-2 px-3 flex items-center gap-2">
+                    <Edit size={14} />
+                    Edit
+                  </button>
+                  <button 
+                    onClick={() => confirmDelete(doctor)}
+                    className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground transition-all text-sm"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                  <button className="btn-accent text-sm py-2 px-4 ml-auto">
                     Schedule
                   </button>
                 </div>
@@ -165,6 +265,39 @@ const Doctors = () => {
           </div>
         ))}
       </div>
+
+      {filteredDoctors.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">No doctors found matching your criteria.</p>
+        </div>
+      )}
+
+      {/* Modals */}
+      <AddDoctorModal
+        open={addModalOpen}
+        onOpenChange={setAddModalOpen}
+        onAdd={handleAddDoctor}
+      />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Doctor</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove {selectedDoctor?.name}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteDoctor}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 };
