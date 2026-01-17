@@ -144,74 +144,76 @@ const Doctors = () => {
   return (
     <DashboardLayout title="Doctors" subtitle="Manage your medical staff">
       {/* Actions Bar */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between mb-6 animate-fade-up">
-        <div className="relative flex-1 max-w-md">
-          <Search
-            size={18}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
-          />
-          <input
-            type="text"
-            placeholder="Search doctors..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="input-modern pl-11"
-          />
+      <div className="flex flex-col gap-3 sm:gap-4 mb-6 animate-fade-up">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-between items-stretch sm:items-center">
+          <div className="relative flex-1 w-full sm:max-w-md">
+            <Search
+              size={18}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+            />
+            <input
+              type="text"
+              placeholder="Search doctors..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="input-modern pl-11 w-full"
+            />
+          </div>
+          <div className="flex gap-2 sm:gap-3">
+            <button 
+              className={`btn-ghost flex-1 sm:flex-none ${showFilters ? 'bg-muted' : ''}`}
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <Filter size={18} />
+              <span className="hidden sm:inline">Filters</span>
+            </button>
+            <button className="btn-accent flex-1 sm:flex-none" onClick={() => setAddModalOpen(true)}>
+              <Plus size={18} />
+              <span>Add Doctor</span>
+            </button>
+          </div>
         </div>
-        <div className="flex gap-3">
-          <button 
-            className={`btn-ghost ${showFilters ? 'bg-muted' : ''}`}
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <Filter size={18} />
-            Filters
-          </button>
-          <button className="btn-accent" onClick={() => setAddModalOpen(true)}>
-            <Plus size={18} />
-            Add Doctor
-          </button>
-        </div>
+
+        {/* Filter Options */}
+        {showFilters && (
+          <div className="flex flex-wrap gap-2 animate-fade-up">
+            {['All', 'Available', 'Busy', 'On Leave'].map((status) => (
+              <button
+                key={status}
+                onClick={() => setFilterAvailability(status)}
+                className={`px-3 md:px-4 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-medium transition-all whitespace-nowrap ${
+                  filterAvailability === status
+                    ? 'bg-brand-navy text-white'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                }`}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Filter Options */}
-      {showFilters && (
-        <div className="flex flex-wrap gap-2 mb-6 animate-fade-up">
-          {['All', 'Available', 'Busy', 'On Leave'].map((status) => (
-            <button
-              key={status}
-              onClick={() => setFilterAvailability(status)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                filterAvailability === status
-                  ? 'bg-brand-navy text-white'
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-              }`}
-            >
-              {status}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* Doctors Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 stagger-children">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 stagger-children">
         {filteredDoctors.map((doctor) => (
-          <div key={doctor.id} className="card-elevated p-6 group">
-            <div className="flex items-start gap-5">
-              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-brand-navy to-brand-teal flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-bold text-2xl">
+          <div key={doctor.id} className="card-elevated p-4 md:p-6 group">
+            <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-5">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-gradient-to-br from-brand-navy to-brand-teal flex items-center justify-center flex-shrink-0">
+                <span className="text-white font-bold text-xl sm:text-2xl">
                   {doctor.name.split(' ').slice(1).map((n) => n[0]).join('')}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-display font-semibold text-lg text-foreground">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="font-display font-semibold text-base md:text-lg text-foreground truncate">
                       {doctor.name}
                     </h3>
-                    <p className="text-secondary font-medium">{doctor.specialization}</p>
+                    <p className="text-secondary font-medium text-sm">{doctor.specialization}</p>
                   </div>
                   <span
-                    className={`status-badge ${
+                    className={`status-badge self-start ${
                       doctor.availability === 'Available'
                         ? 'status-active'
                         : doctor.availability === 'Busy'
@@ -222,41 +224,42 @@ const Doctors = () => {
                     {doctor.availability}
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-xs md:text-sm text-muted-foreground mt-1">
                   {doctor.department} Department
                 </p>
 
-                <div className="flex items-center gap-6 mt-4">
-                  <div className="flex items-center gap-2">
-                    <Star size={16} className="text-amber-500 fill-amber-500" />
-                    <span className="font-semibold">{doctor.rating}</span>
+                <div className="flex flex-wrap items-center gap-3 md:gap-6 mt-3 md:mt-4">
+                  <div className="flex items-center gap-1.5 md:gap-2">
+                    <Star size={14} className="text-amber-500 fill-amber-500 flex-shrink-0" />
+                    <span className="font-semibold text-sm">{doctor.rating}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Users size={16} />
-                    <span>{doctor.patients} patients</span>
+                  <div className="flex items-center gap-1.5 md:gap-2 text-muted-foreground">
+                    <Users size={14} className="flex-shrink-0" />
+                    <span className="text-xs md:text-sm">{doctor.patients} patients</span>
                   </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Clock size={16} />
-                    <span>{doctor.experience}</span>
+                  <div className="flex items-center gap-1.5 md:gap-2 text-muted-foreground">
+                    <Clock size={14} className="flex-shrink-0" />
+                    <span className="text-xs md:text-sm">{doctor.experience}</span>
                   </div>
                 </div>
 
-                <div className="flex gap-2 mt-5">
-                  <button className="btn-outline text-sm py-2 px-3 flex items-center gap-2">
+                {/* Action buttons - responsive grid */}
+                <div className="flex flex-wrap gap-2 mt-4 md:mt-5">
+                  <button className="btn-outline text-xs md:text-sm py-1.5 md:py-2 px-2 md:px-3 flex items-center gap-1.5 md:gap-2">
                     <Eye size={14} />
-                    View
+                    <span className="hidden xs:inline">View</span>
                   </button>
-                  <button className="btn-outline text-sm py-2 px-3 flex items-center gap-2">
+                  <button className="btn-outline text-xs md:text-sm py-1.5 md:py-2 px-2 md:px-3 flex items-center gap-1.5 md:gap-2">
                     <Edit size={14} />
-                    Edit
+                    <span className="hidden xs:inline">Edit</span>
                   </button>
                   <button 
                     onClick={() => confirmDelete(doctor)}
-                    className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground transition-all text-sm"
+                    className="flex items-center justify-center gap-1.5 px-2 md:px-3 py-1.5 md:py-2 rounded-lg border-2 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground transition-all text-xs md:text-sm"
                   >
                     <Trash2 size={14} />
                   </button>
-                  <button className="btn-accent text-sm py-2 px-4 ml-auto">
+                  <button className="btn-accent text-xs md:text-sm py-1.5 md:py-2 px-3 md:px-4 ml-auto">
                     Schedule
                   </button>
                 </div>

@@ -142,15 +142,15 @@ const Departments = () => {
   return (
     <DashboardLayout title="Departments" subtitle="Overview of all clinic departments">
       {/* Actions */}
-      <div className="flex justify-end mb-6 animate-fade-up">
-        <button className="btn-accent" onClick={() => setAddModalOpen(true)}>
+      <div className="flex justify-end mb-4 md:mb-6 animate-fade-up">
+        <button className="btn-accent w-full sm:w-auto" onClick={() => setAddModalOpen(true)}>
           <Plus size={18} />
-          Add Department
+          <span>Add Department</span>
         </button>
       </div>
 
       {/* Department Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 stagger-children">
         {departments.map((dept) => (
           <div
             key={dept.id}
@@ -158,72 +158,72 @@ const Departments = () => {
             onClick={() => openDetailModal(dept)}
           >
             {/* Header with gradient */}
-            <div className={`h-3 bg-gradient-to-r ${dept.color}`} />
+            <div className={`h-2 md:h-3 bg-gradient-to-r ${dept.color}`} />
 
-            <div className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h3 className="font-display font-bold text-xl text-foreground">
+            <div className="p-4 md:p-6">
+              <div className="flex items-start justify-between mb-3 md:mb-4">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-display font-bold text-lg md:text-xl text-foreground truncate">
                     {dept.name}
                   </h3>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-xs md:text-sm text-muted-foreground mt-1 line-clamp-2">
                     {dept.description}
                   </p>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 ml-2 flex-shrink-0">
                   <button 
                     onClick={(e) => { e.stopPropagation(); }}
-                    className="opacity-0 group-hover:opacity-100 p-2 hover:bg-muted rounded-lg transition-all"
+                    className="p-1.5 md:p-2 hover:bg-muted rounded-lg transition-all md:opacity-0 md:group-hover:opacity-100"
                   >
-                    <Edit size={16} className="text-muted-foreground" />
+                    <Edit size={14} className="text-muted-foreground" />
                   </button>
                   <button 
                     onClick={(e) => confirmDelete(dept, e)}
-                    className="opacity-0 group-hover:opacity-100 p-2 hover:bg-destructive/10 rounded-lg transition-all"
+                    className="p-1.5 md:p-2 hover:bg-destructive/10 rounded-lg transition-all md:opacity-0 md:group-hover:opacity-100"
                   >
-                    <Trash2 size={16} className="text-destructive" />
+                    <Trash2 size={14} className="text-destructive" />
                   </button>
                   <ChevronRight
-                    size={20}
-                    className="text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all"
+                    size={18}
+                    className="text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all hidden md:block"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 mb-5 text-sm">
-                <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
-                  <Stethoscope size={16} className="text-muted-foreground" />
+              <div className="flex items-center gap-2 mb-4 md:mb-5 text-xs md:text-sm">
+                <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                  <Stethoscope size={14} className="text-muted-foreground" />
                 </div>
-                <div>
-                  <p className="text-muted-foreground">Department Head</p>
-                  <p className="font-medium text-foreground">{dept.head}</p>
+                <div className="min-w-0">
+                  <p className="text-muted-foreground text-xs">Department Head</p>
+                  <p className="font-medium text-foreground truncate">{dept.head}</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4 pt-4 border-t border-border">
+              <div className="grid grid-cols-3 gap-2 md:gap-4 pt-3 md:pt-4 border-t border-border">
                 <div className="text-center">
-                  <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-                    <Stethoscope size={14} />
+                  <div className="flex items-center justify-center gap-1 text-muted-foreground mb-0.5 md:mb-1">
+                    <Stethoscope size={12} />
                   </div>
-                  <p className="text-lg font-bold font-display text-foreground">
+                  <p className="text-base md:text-lg font-bold font-display text-foreground">
                     {dept.doctors}
                   </p>
                   <p className="text-xs text-muted-foreground">Doctors</p>
                 </div>
                 <div className="text-center">
-                  <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-                    <Receipt size={14} />
+                  <div className="flex items-center justify-center gap-1 text-muted-foreground mb-0.5 md:mb-1">
+                    <Receipt size={12} />
                   </div>
-                  <p className="text-lg font-bold font-display text-foreground">
+                  <p className="text-base md:text-lg font-bold font-display text-foreground">
                     {dept.services}
                   </p>
                   <p className="text-xs text-muted-foreground">Services</p>
                 </div>
                 <div className="text-center">
-                  <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-                    <Users size={14} />
+                  <div className="flex items-center justify-center gap-1 text-muted-foreground mb-0.5 md:mb-1">
+                    <Users size={12} />
                   </div>
-                  <p className="text-lg font-bold font-display text-foreground">
+                  <p className="text-base md:text-lg font-bold font-display text-foreground">
                     {dept.patients}
                   </p>
                   <p className="text-xs text-muted-foreground">Patients</p>
@@ -235,28 +235,28 @@ const Departments = () => {
       </div>
 
       {/* Stats Summary */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="mt-6 md:mt-8 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
         <div className="metric-card">
-          <p className="text-sm text-muted-foreground mb-2">Total Departments</p>
-          <p className="text-3xl font-bold font-display text-foreground">
+          <p className="text-xs md:text-sm text-muted-foreground mb-1 md:mb-2">Total Departments</p>
+          <p className="text-2xl md:text-3xl font-bold font-display text-foreground">
             {departments.length}
           </p>
         </div>
         <div className="metric-card">
-          <p className="text-sm text-muted-foreground mb-2">Total Doctors</p>
-          <p className="text-3xl font-bold font-display text-foreground">
+          <p className="text-xs md:text-sm text-muted-foreground mb-1 md:mb-2">Total Doctors</p>
+          <p className="text-2xl md:text-3xl font-bold font-display text-foreground">
             {departments.reduce((acc, d) => acc + d.doctors, 0)}
           </p>
         </div>
         <div className="metric-card">
-          <p className="text-sm text-muted-foreground mb-2">Total Services</p>
-          <p className="text-3xl font-bold font-display text-foreground">
+          <p className="text-xs md:text-sm text-muted-foreground mb-1 md:mb-2">Total Services</p>
+          <p className="text-2xl md:text-3xl font-bold font-display text-foreground">
             {departments.reduce((acc, d) => acc + d.services, 0)}
           </p>
         </div>
         <div className="metric-card">
-          <p className="text-sm text-muted-foreground mb-2">Total Patients</p>
-          <p className="text-3xl font-bold font-display text-foreground">
+          <p className="text-xs md:text-sm text-muted-foreground mb-1 md:mb-2">Total Patients</p>
+          <p className="text-2xl md:text-3xl font-bold font-display text-foreground">
             {departments.reduce((acc, d) => acc + d.patients, 0).toLocaleString()}
           </p>
         </div>

@@ -111,45 +111,45 @@ const AddDepartmentModal = ({ open, onOpenChange, onAdd }: AddDepartmentModalPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3 text-xl font-display">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-navy to-brand-teal flex items-center justify-center">
-              <Building className="text-white" size={20} />
+      <DialogContent className="max-w-lg w-[95vw] sm:w-full max-h-[85vh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0">
+          <DialogTitle className="flex items-center gap-3 text-lg md:text-xl font-display">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-gradient-to-br from-brand-navy to-brand-teal flex items-center justify-center flex-shrink-0">
+              <Building className="text-white" size={18} />
             </div>
             Add New Department
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 mt-4">
-          {/* Department Details */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Department Name *</Label>
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden mt-2">
+          {/* Scrollable form content */}
+          <div className="flex-1 overflow-y-auto space-y-4 px-1 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="name" className="text-sm">Department Name *</Label>
               <div className="relative">
-                <Building size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Building size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="name"
                   placeholder="e.g., Cardiology"
                   value={formData.name}
                   onChange={(e) => handleChange('name', e.target.value)}
-                  className={`pl-10 ${errors.name ? 'border-destructive' : ''}`}
+                  className={`pl-9 text-sm ${errors.name ? 'border-destructive' : ''}`}
                 />
               </div>
               {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
             </div>
 
-            <div className="space-y-2">
-              <Label>Department Head *</Label>
+            <div className="space-y-1.5">
+              <Label className="text-sm">Department Head *</Label>
               <Select
                 value={formData.head}
                 onValueChange={(value) => handleChange('head', value)}
               >
-                <SelectTrigger className={errors.head ? 'border-destructive' : ''}>
-                  <User size={16} className="mr-2 text-muted-foreground" />
+                <SelectTrigger className={`text-sm ${errors.head ? 'border-destructive' : ''}`}>
+                  <User size={14} className="mr-2 text-muted-foreground flex-shrink-0" />
                   <SelectValue placeholder="Select department head" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[100] bg-popover">
                   {departmentHeads.map((head) => (
                     <SelectItem key={head} value={head}>
                       {head}
@@ -160,24 +160,24 @@ const AddDepartmentModal = ({ open, onOpenChange, onAdd }: AddDepartmentModalPro
               {errors.head && <p className="text-xs text-destructive">{errors.head}</p>}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Description *</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="description" className="text-sm">Description *</Label>
               <div className="relative">
-                <FileText size={16} className="absolute left-3 top-3 text-muted-foreground" />
+                <FileText size={14} className="absolute left-3 top-3 text-muted-foreground" />
                 <Textarea
                   id="description"
                   placeholder="Brief description of the department..."
                   value={formData.description}
                   onChange={(e) => handleChange('description', e.target.value)}
-                  className={`pl-10 min-h-[80px] ${errors.description ? 'border-destructive' : ''}`}
+                  className={`pl-9 min-h-[60px] text-sm ${errors.description ? 'border-destructive' : ''}`}
                 />
               </div>
               {errors.description && <p className="text-xs text-destructive">{errors.description}</p>}
             </div>
 
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Palette size={16} className="text-muted-foreground" />
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-2 text-sm">
+                <Palette size={14} className="text-muted-foreground" />
                 Department Color
               </Label>
               <div className="grid grid-cols-4 gap-2">
@@ -186,27 +186,27 @@ const AddDepartmentModal = ({ open, onOpenChange, onAdd }: AddDepartmentModalPro
                     key={color.value}
                     type="button"
                     onClick={() => handleChange('color', color.value)}
-                    className={`p-3 rounded-xl border-2 transition-all ${
+                    className={`p-2 md:p-3 rounded-lg md:rounded-xl border-2 transition-all ${
                       formData.color === color.value
                         ? 'border-brand-navy ring-2 ring-brand-navy/20'
                         : 'border-transparent hover:border-muted'
                     }`}
                   >
-                    <div className={`h-6 rounded-lg bg-gradient-to-r ${color.value}`} />
-                    <p className="text-xs text-muted-foreground mt-1">{color.label}</p>
+                    <div className={`h-4 md:h-6 rounded-md md:rounded-lg bg-gradient-to-r ${color.value}`} />
+                    <p className="text-xs text-muted-foreground mt-1 hidden md:block">{color.label}</p>
                   </button>
                 ))}
               </div>
             </div>
 
             {/* Preview */}
-            <div className="p-4 bg-muted/50 rounded-xl">
-              <p className="text-sm text-muted-foreground mb-2">Preview</p>
+            <div className="p-3 bg-muted/50 rounded-lg">
+              <p className="text-xs text-muted-foreground mb-1.5">Preview</p>
               <div className="bg-background rounded-lg overflow-hidden border">
-                <div className={`h-2 bg-gradient-to-r ${formData.color}`} />
-                <div className="p-3">
-                  <p className="font-semibold">{formData.name || 'Department Name'}</p>
-                  <p className="text-sm text-muted-foreground truncate">
+                <div className={`h-1.5 md:h-2 bg-gradient-to-r ${formData.color}`} />
+                <div className="p-2 md:p-3">
+                  <p className="font-semibold text-sm">{formData.name || 'Department Name'}</p>
+                  <p className="text-xs text-muted-foreground truncate">
                     {formData.description || 'Department description...'}
                   </p>
                 </div>
@@ -214,16 +214,16 @@ const AddDepartmentModal = ({ open, onOpenChange, onAdd }: AddDepartmentModalPro
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-4 border-t border-border">
+          {/* Fixed action buttons at bottom */}
+          <div className="flex-shrink-0 flex gap-2 md:gap-3 pt-4 mt-2 border-t border-border bg-background">
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="btn-ghost flex-1"
+              className="btn-ghost flex-1 text-sm"
             >
               Cancel
             </button>
-            <button type="submit" className="btn-accent flex-1">
+            <button type="submit" className="btn-accent flex-1 text-sm">
               Add Department
             </button>
           </div>

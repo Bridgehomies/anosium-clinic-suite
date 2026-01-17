@@ -146,7 +146,7 @@
 
   /* Metric Card */
   .metric-card {
-    @apply relative overflow-hidden rounded-xl p-6 border border-border/50;
+    @apply relative overflow-hidden rounded-xl p-4 md:p-6 border border-border/50;
     background: var(--gradient-card);
     box-shadow: var(--shadow-sm);
     transition: all 0.3s ease;
@@ -183,11 +183,11 @@
   }
 
   .data-table th {
-    @apply px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30;
+    @apply px-3 md:px-6 py-3 md:py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30;
   }
 
   .data-table td {
-    @apply px-6 py-4 text-sm;
+    @apply px-3 md:px-6 py-3 md:py-4 text-sm;
   }
 
   .data-table tr {
@@ -200,7 +200,7 @@
 
   /* Status Badges */
   .status-badge {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium;
+    @apply inline-flex items-center gap-1.5 px-2 md:px-2.5 py-0.5 md:py-1 rounded-full text-xs font-medium whitespace-nowrap;
   }
 
   .status-active {
@@ -221,16 +221,16 @@
 
   /* Input Styles */
   .input-modern {
-    @apply w-full px-4 py-3 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground transition-all duration-200;
+    @apply w-full px-3 md:px-4 py-2.5 md:py-3 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground transition-all duration-200 text-sm md:text-base;
   }
 
   .input-modern:focus {
     @apply outline-none ring-2 ring-secondary/50 border-secondary;
   }
 
-  /* Button Variants */
+  /* Button Variants - Mobile Optimized */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200;
+    @apply inline-flex items-center justify-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-lg font-medium transition-all duration-200 text-sm md:text-base min-h-[44px];
     background: var(--gradient-primary);
     @apply text-primary-foreground;
     box-shadow: 0 4px 14px 0 hsl(var(--brand-navy) / 0.25);
@@ -242,7 +242,7 @@
   }
 
   .btn-accent {
-    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200;
+    @apply inline-flex items-center justify-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-lg font-medium transition-all duration-200 text-sm md:text-base min-h-[44px] flex-shrink-0;
     background: var(--gradient-accent);
     @apply text-white;
     box-shadow: 0 4px 14px 0 hsl(var(--brand-teal) / 0.3);
@@ -254,11 +254,21 @@
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium text-foreground transition-all duration-200 hover:bg-muted;
+    @apply inline-flex items-center justify-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-lg font-medium text-foreground transition-all duration-200 hover:bg-muted text-sm md:text-base min-h-[44px];
   }
 
   .btn-outline {
-    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium border-2 border-primary text-primary transition-all duration-200 hover:bg-primary hover:text-primary-foreground;
+    @apply inline-flex items-center justify-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-lg font-medium border-2 border-primary text-primary transition-all duration-200 hover:bg-primary hover:text-primary-foreground text-sm md:text-base min-h-[44px];
+  }
+
+  /* Responsive table wrapper for horizontal scroll on mobile */
+  .table-responsive {
+    @apply w-full overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0;
+  }
+
+  /* Dialog/Modal fixes for z-index and mobile */
+  .dialog-content-mobile {
+    @apply fixed inset-x-4 top-[50%] translate-y-[-50%] max-h-[85vh] overflow-y-auto rounded-xl bg-background p-4 md:p-6 z-50;
   }
 }
 
