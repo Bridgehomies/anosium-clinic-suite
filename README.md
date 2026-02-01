@@ -1,73 +1,200 @@
-# Welcome to your Lovable project
+# Anosium Clinic Suite
 
-## Project info
+**Anosium Clinic Suite** is a modern, full-featured **Clinic Management System (CMS)** built to simplify day-to-day healthcare operations. It centralizes patients, appointments, billing, pharmacy, and diagnostics into one fast, scalable platform.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+The goal is simple:
+**less admin work, better clinical flow, clearer data.**
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+## 🚀 What It Does
 
-**Use Lovable**
+Anosium digitizes the entire clinic workflow—from appointment booking to diagnostics and final billing—so staff can focus on patients instead of paperwork.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+It’s designed for:
 
-Changes made via Lovable will be committed automatically to this repo.
+* Small to mid-size clinics
+* Multi-department practices
+* Clinics that want structure without complexity
 
-**Use your preferred IDE**
+---
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## ✨ Core Features
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 📊 Dashboard
 
-Follow these steps:
+* Real-time metrics
+* Total patients, appointments, daily revenue
+* Quick operational snapshot at login
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### 👤 Patient Management
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+* Centralized digital patient records
+* Personal details, medical history, visit tracking
 
-# Step 3: Install the necessary dependencies.
-npm i
+### 📅 Appointment Scheduling
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+* Easy booking and rescheduling
+* Status tracking: **Pending → Confirmed → Completed**
+
+### 💳 Billing & Invoicing
+
+* Automatic invoice generation
+* Payment tracking
+* Financial summaries and reports
+
+### 💊 Pharmacy & Inventory
+
+* Medicine stock management
+* Expiry tracking
+* Prescription handling
+
+### 🔬 Laboratory & Radiology
+
+* Diagnostic test result management
+* Imaging and lab report integration
+
+### 👨‍⚕️ Staff Management
+
+* Doctor schedules
+* Department assignments
+* Role-based access control
+
+### ⚙️ System Settings
+
+* Clinic profile customization
+* User permissions and access rules
+
+---
+
+## 🛠 Tech Stack
+
+| Layer        | Tech         |
+| ------------ | ------------ |
+| Frontend     | React.js     |
+| Build Tool   | Vite         |
+| Styling      | Tailwind CSS |
+| Package Mgmt | pnpm         |
+| Icons        | Lucide React |
+
+---
+
+## 🏁 Getting Started
+
+### Prerequisites
+
+* Node.js **v18+**
+* pnpm
+
+```bash
+npm install -g pnpm
 ```
 
-**Edit a file directly in GitHub**
+---
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Installation
 
-**Use GitHub Codespaces**
+Clone the repository:
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```bash
+git clone https://github.com/Bridgehomies/anosium-clinic-suite.git
+cd anosium-clinic-suite
+```
 
-## What technologies are used for this project?
+Install dependencies:
 
-This project is built with:
+```bash
+pnpm install
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Create a `.env` file in the project root:
 
-## How can I deploy this project?
+```env
+VITE_API_URL=your_api_endpoint
+```
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+Run the development server:
 
-## Can I connect a custom domain to my Lovable project?
+```bash
+pnpm dev
+```
 
-Yes, you can!
+Build for production:
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+```bash
+pnpm build
+```
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+---
+
+## 📁 Project Structure
+
+```plaintext
+src/
+├── components/     # Reusable UI components
+├── pages/          # Application views (Dashboard, Patients, Billing)
+├── hooks/          # Custom React hooks
+├── context/        # Global state & authentication
+├── assets/         # Images and static resources
+└── utils/          # Helpers and API configurations
+```
+
+---
+
+## 🔒 Security & Access Control
+
+* Role-based access (Admin, Doctor, Staff)
+* Controlled permissions per module
+* Environment-based configuration support
+
+> Backend authentication and API security depend on the connected server implementation.
+
+---
+
+## 🛣 Roadmap (Planned)
+
+* ✅ Patient & appointment workflows
+* ⏳ Notification system (SMS / Email)
+* ⏳ Role-based analytics
+* ⏳ Multi-clinic support
+* ⏳ Audit logs & activity tracking
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome and encouraged.
+
+1. Fork the repository
+2. Create your feature branch
+
+   ```bash
+   git checkout -b feature/YourFeature
+   ```
+3. Commit your changes
+
+   ```bash
+   git commit -m "Add YourFeature"
+   ```
+4. Push to the branch
+
+   ```bash
+   git push origin feature/YourFeature
+   ```
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License**.
+See the `LICENSE` file for details.
+
+---
+
+## 👨‍💻 Developed By
+
+**Bridgehomies**
+Building practical software with clarity and purpose.
+
+---
