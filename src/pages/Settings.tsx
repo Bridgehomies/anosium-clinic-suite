@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { User, Bell, Shield, Palette, Globe, HelpCircle, ChevronRight, ArrowLeft, Camera, Mail, Phone, Building, Save, Eye, EyeOff, Smartphone, Monitor, Moon, Sun, Check } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Switch } from '@/components/ui/switch';
@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { useTheme } from '@/contexts/ThemeContext';
 
 type SettingsSection = 'main' | 'profile' | 'notifications' | 'security' | 'appearance' | 'language' | 'help';
 
@@ -51,6 +52,7 @@ const settingsSections = [
 
 const Settings = () => {
   const [activeSection, setActiveSection] = useState<SettingsSection>('main');
+  const { theme, setTheme } = useTheme();
   
   // Profile state
   const [profile, setProfile] = useState({
@@ -87,7 +89,6 @@ const Settings = () => {
 
   // Appearance state
   const [appearance, setAppearance] = useState({
-    theme: 'light',
     accentColor: 'teal',
     compactMode: false,
     animationsEnabled: true,
@@ -604,25 +605,30 @@ const Settings = () => {
       {/* Theme */}
       <div className="card-elevated p-6">
         <h3 className="font-semibold text-lg mb-6">Theme</h3>
+        <p className="text-sm text-muted-foreground mb-4">Choose your preferred color scheme. Your preference will be saved automatically.</p>
         <div className="grid grid-cols-3 gap-4">
           {[
-            { id: 'light', label: 'Light', icon: Sun },
-            { id: 'dark', label: 'Dark', icon: Moon },
-            { id: 'system', label: 'System', icon: Monitor },
-          ].map((theme) => (
+            { id: 'light' as const, label: 'Light', icon: Sun, description: 'Bright and clean' },
+            { id: 'dark' as const, label: 'Dark', icon: Moon, description: 'Easy on the eyes' },
+            { id: 'system' as const, label: 'System', icon: Monitor, description: 'Match device' },
+          ].map((themeOption) => (
             <button
-              key={theme.id}
-              onClick={() => setAppearance({ ...appearance, theme: theme.id })}
-              className={`p-4 rounded-xl border-2 transition-all ${
-                appearance.theme === theme.id
-                  ? 'border-secondary bg-brand-teal-light'
+              key={themeOption.id}
+              onClick={() => {
+                setTheme(themeOption.id);
+                toast.success(`Theme changed to ${themeOption.label}`);
+              }}
+              className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center text-center ${
+                theme === themeOption.id
+                  ? 'border-secondary bg-accent'
                   : 'border-border hover:border-secondary/50'
               }`}
             >
-              <theme.icon size={24} className={appearance.theme === theme.id ? 'text-secondary' : 'text-muted-foreground'} />
-              <p className={`mt-2 font-medium ${appearance.theme === theme.id ? 'text-secondary' : 'text-foreground'}`}>
-                {theme.label}
+              <themeOption.icon size={24} className={theme === themeOption.id ? 'text-secondary' : 'text-muted-foreground'} />
+              <p className={`mt-2 font-medium ${theme === themeOption.id ? 'text-secondary' : 'text-foreground'}`}>
+                {themeOption.label}
               </p>
+              <p className="text-xs text-muted-foreground mt-1">{themeOption.description}</p>
             </button>
           ))}
         </div>
