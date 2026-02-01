@@ -1,9 +1,26 @@
 import { useState } from 'react';
-import { Plus, ChevronLeft, ChevronRight, Clock, User, Stethoscope, X } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Clock, User, Stethoscope, X, Edit, Trash2 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import AppointmentBookingModal from '@/components/appointments/AppointmentBookingModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
 
-const appointments = [
+interface Appointment {
+  id: number;
+  patient: string;
+  doctor: string;
+  date: string;
+  time: string;
+  type: string;
+  status: string;
+  duration: string;
+}
+
+const initialAppointments: Appointment[] = [
   {
     id: 1,
     patient: 'Sarah Johnson',
@@ -61,6 +78,23 @@ const timeSlots = [
   '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM',
 ];
 
+const doctors = [
+  'Dr. Michael Chen',
+  'Dr. Emily Parker',
+  'Dr. James Wilson',
+  'Dr. Sarah Lee',
+  'Dr. Robert Martinez',
+];
+
+const appointmentTypes = [
+  'General Checkup',
+  'Follow-up',
+  'Consultation',
+  'Surgery Prep',
+  'Lab Results',
+  'Specialist Visit',
+];
+
 const statusColors = {
   confirmed: 'bg-emerald-500',
   'in-progress': 'bg-amber-500',
@@ -70,8 +104,116 @@ const statusColors = {
 
 const Appointments = () => {
   const [view, setView] = useState<'list' | 'calendar'>('list');
-  const [currentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
+  const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
+  
+  // Edit modal state
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  
+  // Edit form state
+  const [editForm, setEditForm] = useState({
+    patient: '',
+    doctor: '',
+    time: '',
+    type: '',
+    status: '',
+    duration: '',
+  });
+
+  const handlePrevDay = () => {
+    const prev = new Date(currentDate);
+    prev.setDate(prev.getDate() - 1);
+    setCurrentDate(prev);
+  };
+
+  const handleNextDay = () => {
+    const next = new Date(currentDate);
+    next.setDate(next.getDate() + 1);
+    setCurrentDate(next);
+  };
+
+  const openEditModal = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setEditForm({
+      patient: appointment.patient,
+      doctor: appointment.doctor,
+      time: appointment.time,
+      type: appointment.type,
+      status: appointment.status,
+      duration: appointment.duration,
+    });
+    setEditModalOpen(true);
+  };
+
+  const openRescheduleModal = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setEditForm({
+      patient: appointment.patient,
+      doctor: appointment.doctor,
+      time: appointment.time,
+      type: appointment.type,
+      status: appointment.status,
+      duration: appointment.duration,
+    });
+    setRescheduleModalOpen(true);
+  };
+
+  const openDeleteDialog = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleEdit = () => {
+    if (!selectedAppointment) return;
+    setAppointments(prev => prev.map(apt => 
+      apt.id === selectedAppointment.id 
+        ? { ...apt, ...editForm }
+        : apt
+    ));
+    setEditModalOpen(false);
+    toast.success('Appointment updated successfully');
+  };
+
+  const handleReschedule = () => {
+    if (!selectedAppointment) return;
+    setAppointments(prev => prev.map(apt => 
+      apt.id === selectedAppointment.id 
+        ? { ...apt, time: editForm.time, status: 'pending' }
+        : apt
+    ));
+    setRescheduleModalOpen(false);
+    toast.success('Appointment rescheduled successfully');
+  };
+
+  const handleCancel = () => {
+    if (!selectedAppointment) return;
+    setAppointments(prev => prev.map(apt => 
+      apt.id === selectedAppointment.id 
+        ? { ...apt, status: 'cancelled' }
+        : apt
+    ));
+    setDeleteDialogOpen(false);
+    toast.success('Appointment cancelled');
+  };
+
+  const handleBookAppointment = (data: any) => {
+    const newAppointment: Appointment = {
+      id: Date.now(),
+      patient: data.patient,
+      doctor: data.doctor,
+      date: data.date.toISOString().split('T')[0],
+      time: data.time,
+      type: data.service,
+      status: 'confirmed',
+      duration: '30 min',
+    };
+    setAppointments(prev => [...prev, newAppointment]);
+    toast.success('Appointment booked successfully');
+  };
 
   return (
     <DashboardLayout title="Appointments" subtitle="Manage patient appointments">
@@ -79,10 +221,10 @@ const Appointments = () => {
       <div className="flex flex-col gap-3 sm:gap-4 mb-6 animate-fade-up">
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-between items-stretch sm:items-center">
           <div className="flex items-center gap-2 sm:gap-4 justify-center sm:justify-start">
-            <button className="btn-ghost p-1.5 sm:p-2">
+            <button onClick={handlePrevDay} className="btn-ghost p-1.5 sm:p-2">
               <ChevronLeft size={18} />
             </button>
-            <h2 className="font-display font-semibold text-sm md:text-lg text-center">
+            <h2 className="font-display font-semibold text-sm md:text-lg text-center min-w-[180px]">
               {currentDate.toLocaleDateString('en-US', {
                 weekday: 'short',
                 year: 'numeric',
@@ -90,7 +232,7 @@ const Appointments = () => {
                 day: 'numeric',
               })}
             </h2>
-            <button className="btn-ghost p-1.5 sm:p-2">
+            <button onClick={handleNextDay} className="btn-ghost p-1.5 sm:p-2">
               <ChevronRight size={18} />
             </button>
           </div>
@@ -187,13 +329,22 @@ const Appointments = () => {
                     </td>
                     <td>
                       <div className="flex items-center gap-1 md:gap-2">
-                        <button className="inline-flex items-center justify-center h-7 md:h-8 px-2 md:px-3 rounded-lg bg-brand-teal/10 text-brand-teal hover:bg-brand-teal/20 transition-colors text-xs font-medium">
+                        <button 
+                          onClick={() => openEditModal(appointment)}
+                          className="inline-flex items-center justify-center h-7 md:h-8 px-2 md:px-3 rounded-lg bg-secondary/10 text-secondary hover:bg-secondary/20 transition-colors text-xs font-medium"
+                        >
                           Edit
                         </button>
-                        <button className="hidden sm:inline-flex items-center justify-center h-7 md:h-8 px-2 md:px-3 rounded-lg bg-brand-navy/10 text-brand-navy hover:bg-brand-navy/20 transition-colors text-xs font-medium">
+                        <button 
+                          onClick={() => openRescheduleModal(appointment)}
+                          className="hidden sm:inline-flex items-center justify-center h-7 md:h-8 px-2 md:px-3 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-xs font-medium"
+                        >
                           Reschedule
                         </button>
-                        <button className="inline-flex items-center justify-center h-7 md:h-8 w-7 md:w-8 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors">
+                        <button 
+                          onClick={() => openDeleteDialog(appointment)}
+                          className="inline-flex items-center justify-center h-7 md:h-8 w-7 md:w-8 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                        >
                           <X size={12} />
                         </button>
                       </div>
@@ -232,10 +383,11 @@ const Appointments = () => {
                     .map((apt) => (
                       <div
                         key={apt.id}
-                        className={`absolute top-0 left-0 right-2 md:right-4 p-2 md:p-3 rounded-lg ${
+                        onClick={() => openEditModal(apt)}
+                        className={`absolute top-0 left-0 right-2 md:right-4 p-2 md:p-3 rounded-lg cursor-pointer transition-transform hover:scale-[1.02] ${
                           apt.status === 'cancelled'
-                            ? 'bg-red-50 border-l-4 border-red-400'
-                            : 'bg-brand-teal-light border-l-4 border-brand-teal'
+                            ? 'bg-destructive/10 border-l-4 border-destructive'
+                            : 'bg-accent border-l-4 border-secondary'
                         }`}
                       >
                         <div className="flex items-center justify-between">
@@ -266,7 +418,126 @@ const Appointments = () => {
       <AppointmentBookingModal
         open={bookingModalOpen}
         onOpenChange={setBookingModalOpen}
+        onBookAppointment={handleBookAppointment}
       />
+
+      {/* Edit Modal */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Appointment</DialogTitle>
+            <DialogDescription>Update appointment details</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Patient</Label>
+              <Input 
+                value={editForm.patient} 
+                onChange={(e) => setEditForm({ ...editForm, patient: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Doctor</Label>
+              <Select value={editForm.doctor} onValueChange={(v) => setEditForm({ ...editForm, doctor: v })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="z-[100] bg-popover">
+                  {doctors.map((doc) => (
+                    <SelectItem key={doc} value={doc}>{doc}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Type</Label>
+              <Select value={editForm.type} onValueChange={(v) => setEditForm({ ...editForm, type: v })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="z-[100] bg-popover">
+                  {appointmentTypes.map((type) => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={editForm.status} onValueChange={(v) => setEditForm({ ...editForm, status: v })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="z-[100] bg-popover">
+                  <SelectItem value="confirmed">Confirmed</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="in-progress">In Progress</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <button onClick={() => setEditModalOpen(false)} className="btn-ghost">Cancel</button>
+            <button onClick={handleEdit} className="btn-accent">Save Changes</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reschedule Modal */}
+      <Dialog open={rescheduleModalOpen} onOpenChange={setRescheduleModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reschedule Appointment</DialogTitle>
+            <DialogDescription>Select a new time for this appointment</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label className="mb-3 block">Select New Time</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {['09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', 
+                '02:00 PM', '02:30 PM', '03:00 PM', '03:30 PM', '04:00 PM', '04:30 PM'].map((time) => (
+                <button
+                  key={time}
+                  onClick={() => setEditForm({ ...editForm, time })}
+                  className={`py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                    editForm.time === time
+                      ? 'bg-secondary text-secondary-foreground'
+                      : 'bg-muted hover:bg-muted/80 text-foreground'
+                  }`}
+                >
+                  {time}
+                </button>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <button onClick={() => setRescheduleModalOpen(false)} className="btn-ghost">Cancel</button>
+            <button onClick={handleReschedule} className="btn-accent">Reschedule</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Appointment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel the appointment for "{selectedAppointment?.patient}"? 
+              This will notify the patient about the cancellation.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep Appointment</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleCancel}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Cancel Appointment
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 };
