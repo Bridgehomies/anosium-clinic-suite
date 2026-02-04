@@ -1,23 +1,45 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react';
+import authService from '../lib/authService';
 
 const SignIn = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    // Simulate authentication
-    setTimeout(() => {
-      setIsLoading(false);
+    setError('');
+
+    try {
+      await authService.signIn({
+        email: email,
+        password: password,
+      });
+
+      // Success - navigate to dashboard
       navigate('/dashboard');
-    }, 1000);
+    } catch (err: any) {
+      console.error('Login error:', err);
+      
+      // Handle different error types from your backend
+      if (err.response?.status === 401) {
+        setError('Invalid email or password');
+      } else if (err.response?.status === 403) {
+        setError('Account is inactive. Please contact support.');
+      } else if (err.response?.data?.detail) {
+        setError(err.response.data.detail);
+      } else {
+        setError('An error occurred. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -89,6 +111,14 @@ const SignIn = () => {
             </p>
           </div>
 
+          {/* Error Alert */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+              <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={18} />
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
@@ -98,9 +128,10 @@ const SignIn = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@anosium.ai"
+                placeholder="admin@clinic.com"
                 className="input-modern"
                 required
+                disabled={isLoading}
               />
             </div>
 
@@ -116,11 +147,13 @@ const SignIn = () => {
                   placeholder="••••••••"
                   className="input-modern pr-12"
                   required
+                  disabled={isLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  disabled={isLoading}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -132,12 +165,16 @@ const SignIn = () => {
                 <input
                   type="checkbox"
                   className="w-4 h-4 rounded border-border text-secondary focus:ring-secondary"
+                  disabled={isLoading}
                 />
                 <span className="text-sm text-muted-foreground">Remember me</span>
               </label>
-              <a href="#" className="text-sm text-secondary font-medium hover:underline">
+              <Link 
+                to="/forgot-password" 
+                className="text-sm text-secondary font-medium hover:underline"
+              >
                 Forgot password?
-              </a>
+              </Link>
             </div>
 
             <button
@@ -162,15 +199,6 @@ const SignIn = () => {
               Sign up
             </Link>
           </p>
-
-          {/* Demo Credentials */}
-          <div className="mt-8 p-4 bg-muted/50 rounded-xl border border-border">
-            <p className="text-xs text-muted-foreground mb-2 font-medium">Demo Credentials:</p>
-            <div className="space-y-1 text-sm">
-              <p><span className="text-muted-foreground">Email:</span> <span className="font-mono">admin@anosium.ai</span></p>
-              <p><span className="text-muted-foreground">Password:</span> <span className="font-mono">admin123</span></p>
-            </div>
-          </div>
         </div>
       </div>
     </div>

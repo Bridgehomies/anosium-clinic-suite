@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, ArrowRight, Check } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, Check, AlertCircle } from 'lucide-react';
+import authService from '../lib/authService';
 
 const SignUp = () => {
   const [formData, setFormData] = useState({
@@ -12,20 +13,60 @@ const SignUp = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError(''); // Clear error on input change
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+
+    // Validate passwords match
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    // Validate password requirements
+    const unmetRequirements = passwordRequirements.filter(req => !req.met);
+    if (unmetRequirements.length > 0) {
+      setError('Please meet all password requirements');
+      return;
+    }
+
     setIsLoading(true);
-    
-    setTimeout(() => {
-      setIsLoading(false);
+
+    try {
+      const response = await authService.signUp({
+        fullName: formData.fullName,
+        email: formData.email,
+        password: formData.password,
+      });
+
+      // Success - navigate to dashboard
       navigate('/dashboard');
-    }, 1000);
+    } catch (err: any) {
+      console.error('Signup error:', err);
+      
+      // Handle different error types
+      if (err.response?.status === 400) {
+        if (err.response.data?.detail?.includes('email')) {
+          setError('This email is already registered');
+        } else {
+          setError(err.response.data?.detail || 'Invalid registration data');
+        }
+      } else if (err.response?.data?.detail) {
+        setError(err.response.data.detail);
+      } else {
+        setError('An error occurred during registration. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const passwordRequirements = [
@@ -59,6 +100,14 @@ const SignUp = () => {
             </p>
           </div>
 
+          {/* Error Alert */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+              <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={18} />
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
@@ -72,6 +121,7 @@ const SignUp = () => {
                 placeholder="Dr. John Smith"
                 className="input-modern"
                 required
+                disabled={isLoading}
               />
             </div>
 
@@ -87,6 +137,7 @@ const SignUp = () => {
                 placeholder="doctor@clinic.com"
                 className="input-modern"
                 required
+                disabled={isLoading}
               />
             </div>
 
@@ -103,11 +154,13 @@ const SignUp = () => {
                   placeholder="••••••••"
                   className="input-modern pr-12"
                   required
+                  disabled={isLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  disabled={isLoading}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -148,7 +201,11 @@ const SignUp = () => {
                 placeholder="••••••••"
                 className="input-modern"
                 required
+                disabled={isLoading}
               />
+              {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                <p className="mt-2 text-xs text-red-600">Passwords do not match</p>
+              )}
             </div>
 
             <label className="flex items-start gap-3 cursor-pointer py-2">
@@ -157,6 +214,7 @@ const SignUp = () => {
                 checked={agreed}
                 onChange={(e) => setAgreed(e.target.checked)}
                 className="w-4 h-4 mt-0.5 rounded border-border text-secondary focus:ring-secondary"
+                disabled={isLoading}
               />
               <span className="text-sm text-muted-foreground">
                 I agree to the{' '}
