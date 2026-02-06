@@ -1,10 +1,14 @@
 /**
  * Authentication Service
  * Handles all authentication-related API calls
- * Updated to match FastAPI backend OpenAPI specification
+ * FIXED: Properly aligned with FastAPI backend OpenAPI specification
  */
 
-import apiClient from './client';
+import apiClient, { getErrorMessage } from './client';
+
+// ============================================================================
+// TYPES & INTERFACES
+// ============================================================================
 
 export interface LoginCredentials {
   email: string;
@@ -15,6 +19,18 @@ export interface SignUpData {
   fullName: string;
   email: string;
   password: string;
+  clinicName?: string; // Optional clinic name
+}
+
+export interface TenantCreateRequest {
+  name: string;
+  email: string;
+  slug: string;
+  password: string;
+  admin_first_name: string;
+  admin_last_name: string;
+  phone?: string;
+  address?: string;
 }
 
 export interface AuthResponse {
@@ -30,80 +46,119 @@ export interface UserResponse {
   first_name: string;
   last_name: string;
   full_name: string;
-  role: string;
+  role: 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'STAFF';
   tenant_id: number | null;
   is_active: boolean;
   is_verified: boolean;
   created_at: string;
   updated_at?: string;
+  last_login?: string;
 }
 
-export interface TokenResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-  expires_in: number;
+export interface TenantResponse {
+  id: number;
+  name: string;
+  slug: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  subscription_plan: 'FREE' | 'BASIC' | 'PREMIUM' | 'ENTERPRISE';
+  subscription_status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'CANCELLED';
+  subscription_start_date: string;
+  subscription_end_date?: string;
+  is_active: boolean;
+  settings?: Record<string, any>;
+  created_at: string;
+  updated_at?: string;
 }
+
+export interface SessionInfo {
+  device_name: string;
+  ip_address: string;
+  last_used: string;
+  created_at: string;
+  token: string;
+}
+
+// ============================================================================
+// AUTH SERVICE CLASS
+// ============================================================================
 
 class AuthService {
   /**
    * Sign in user
+   * Backend: POST /auth/login
+   * Body: {email, password}
    */
   async signIn(credentials: LoginCredentials): Promise<AuthResponse> {
-    const response = await apiClient.post<AuthResponse>('/auth/login', {
-      email: credentials.email,
-      password: credentials.password,
-    });
-    
-    // Store tokens
-    if (response.data.access_token) {
-      localStorage.setItem('access_token', response.data.access_token);
-      localStorage.setItem('refresh_token', response.data.refresh_token);
-      
-      // Fetch and store user data
-      await this.fetchAndStoreUserData();
+    try {
+      const response = await apiClient.post<AuthResponse>('/auth/login', {
+        email: credentials.email,
+        password: credentials.password,
+      });
+
+      // Store tokens
+      if (response.data.access_token) {
+        localStorage.setItem('access_token', response.data.access_token);
+        localStorage.setItem('refresh_token', response.data.refresh_token);
+
+        // Fetch and store user data
+        await this.fetchAndStoreUserData();
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error('Sign in error:', error);
+      throw error;
     }
-    
-    return response.data;
   }
 
   /**
-   * Sign up new user (creates tenant)
+   * Sign up new user (creates tenant + admin user)
+   * Backend: POST /tenants
+   * Body: {name, email, slug, password, admin_first_name, admin_last_name}
    */
-  async signUp(data: SignUpData): Promise<UserResponse> {
-    // Split full name into first and last name
-    const nameParts = data.fullName.trim().split(' ');
-    const firstName = nameParts[0];
-    const lastName = nameParts.slice(1).join(' ') || nameParts[0]; // Use first name as last if only one name provided
-    
-    // Generate slug from email (you might want to make this user-customizable)
-    const slug = data.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '-');
-    
-    // Create tenant (which also creates the admin user)
-    const payload = {
-      name: data.fullName + "'s Clinic", // You might want to ask for clinic name separately
-      email: data.email,
-      slug: slug,
-      password: data.password,
-      admin_first_name: firstName,
-      admin_last_name: lastName,
-    };
+  async signUp(data: SignUpData): Promise<TenantResponse> {
+    try {
+      // Split full name into first and last name
+      const nameParts = data.fullName.trim().split(' ');
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(' ') || nameParts[0];
 
-    const response = await apiClient.post<any>('/tenants', payload);
-    
-    // After registration, automatically log in
-    await this.signIn({
-      email: data.email,
-      password: data.password,
-    });
-    
-    // Return user data (you'll get it from the login flow)
-    const user = this.getUser();
-    return user as UserResponse;
+      // Generate slug from email
+      const slug = data.email
+        .split('@')[0]
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-');
+
+      // Create tenant (which also creates the admin user)
+      const payload: TenantCreateRequest = {
+        name: data.clinicName || `${data.fullName}'s Clinic`,
+        email: data.email,
+        slug: slug,
+        password: data.password,
+        admin_first_name: firstName,
+        admin_last_name: lastName,
+      };
+
+      const response = await apiClient.post<TenantResponse>('/tenants', payload);
+
+      // After registration, automatically log in
+      await this.signIn({
+        email: data.email,
+        password: data.password,
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Sign up error:', error);
+      throw error;
+    }
   }
 
   /**
    * Sign out user
+   * Backend: POST /auth/logout
    */
   async signOut(): Promise<void> {
     try {
@@ -111,47 +166,91 @@ class AuthService {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      // Clear local storage
+      // Clear local storage regardless of API call result
       this.clearStorage();
     }
   }
 
   /**
-   * Refresh access token
+   * Sign out from specific device
+   * Backend: POST /auth/logout-device
+   * Query params: ?refresh_token={token}
    */
-  async refreshToken(): Promise<TokenResponse> {
+  async signOutDevice(refreshToken: string): Promise<void> {
+    try {
+      await apiClient.post(`/auth/logout-device?refresh_token=${encodeURIComponent(refreshToken)}`);
+    } catch (error) {
+      console.error('Logout device error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Refresh access token
+   * Backend: POST /auth/refresh
+   * Query params: ?refresh_token={token}
+   */
+  async refreshToken(): Promise<AuthResponse> {
     const refreshToken = localStorage.getItem('refresh_token');
-    
+
     if (!refreshToken) {
       throw new Error('No refresh token available');
     }
 
-    // According to the API spec, refresh_token is a query parameter
-    const response = await apiClient.post<TokenResponse>(
-      `/auth/refresh?refresh_token=${encodeURIComponent(refreshToken)}`
-    );
-    
-    if (response.data.access_token) {
-      localStorage.setItem('access_token', response.data.access_token);
-      if (response.data.refresh_token) {
-        localStorage.setItem('refresh_token', response.data.refresh_token);
+    try {
+      const response = await apiClient.post<AuthResponse>(
+        `/auth/refresh?refresh_token=${encodeURIComponent(refreshToken)}`
+      );
+
+      if (response.data.access_token) {
+        localStorage.setItem('access_token', response.data.access_token);
+        if (response.data.refresh_token) {
+          localStorage.setItem('refresh_token', response.data.refresh_token);
+        }
       }
+
+      return response.data;
+    } catch (error) {
+      console.error('Token refresh error:', error);
+      // If refresh fails, clear tokens and redirect to login
+      this.clearStorage();
+      throw error;
     }
-    
-    return response.data;
   }
 
   /**
    * Get current user
+   * Backend: GET /auth/me
    */
   async getCurrentUser(): Promise<UserResponse> {
-    const response = await apiClient.get<UserResponse>('/auth/me');
-    localStorage.setItem('user', JSON.stringify(response.data));
-    return response.data;
+    try {
+      const response = await apiClient.get<UserResponse>('/auth/me');
+      localStorage.setItem('user', JSON.stringify(response.data));
+      return response.data;
+    } catch (error) {
+      console.error('Get current user error:', error);
+      throw error;
+    }
   }
 
   /**
-   * Fetch and store user data
+   * Get active sessions
+   * Backend: GET /auth/sessions
+   */
+  async getActiveSessions(): Promise<SessionInfo[]> {
+    try {
+      const response = await apiClient.get<{ success: boolean; data: SessionInfo[] }>(
+        '/auth/sessions'
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Get sessions error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch and store user data (internal helper)
    */
   private async fetchAndStoreUserData(): Promise<void> {
     try {
@@ -164,38 +263,70 @@ class AuthService {
 
   /**
    * Request password reset
+   * Backend: POST /auth/password/reset-request
+   * Body: {email}
    */
   async requestPasswordReset(email: string): Promise<void> {
-    await apiClient.post('/auth/password/reset-request', { email });
+    try {
+      await apiClient.post('/auth/password/reset-request', { email });
+    } catch (error) {
+      console.error('Request password reset error:', error);
+      throw error;
+    }
   }
 
   /**
    * Reset password with token
+   * Backend: POST /auth/password/reset
+   * Query params: ?token={token}&new_password={password}
    */
   async resetPassword(token: string, newPassword: string): Promise<void> {
-    // According to API spec, these are query parameters
-    await apiClient.post(
-      `/auth/password/reset?token=${encodeURIComponent(token)}&new_password=${encodeURIComponent(newPassword)}`
-    );
+    try {
+      await apiClient.post(
+        `/auth/password/reset?token=${encodeURIComponent(token)}&new_password=${encodeURIComponent(
+          newPassword
+        )}`
+      );
+    } catch (error) {
+      console.error('Reset password error:', error);
+      throw error;
+    }
   }
 
   /**
-   * Change password
+   * Change password (requires authentication)
+   * Backend: POST /auth/password/change
+   * Body: {old_password, new_password}
    */
   async changePassword(oldPassword: string, newPassword: string): Promise<void> {
-    await apiClient.post('/auth/password/change', {
-      old_password: oldPassword,
-      new_password: newPassword,
-    });
+    try {
+      await apiClient.post('/auth/password/change', {
+        old_password: oldPassword,
+        new_password: newPassword,
+      });
+    } catch (error) {
+      console.error('Change password error:', error);
+      throw error;
+    }
   }
 
   /**
    * Verify email
+   * Backend: POST /auth/verify-email
+   * Query params: ?token={token}
    */
   async verifyEmail(token: string): Promise<void> {
-    // According to API spec, token is a query parameter
-    await apiClient.post(`/auth/verify-email?token=${encodeURIComponent(token)}`);
+    try {
+      await apiClient.post(`/auth/verify-email?token=${encodeURIComponent(token)}`);
+    } catch (error) {
+      console.error('Verify email error:', error);
+      throw error;
+    }
   }
+
+  // ============================================================================
+  // LOCAL STORAGE HELPERS
+  // ============================================================================
 
   /**
    * Check if user is authenticated
@@ -236,6 +367,52 @@ class AuthService {
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
   }
+
+  /**
+   * Get user role
+   */
+  getUserRole(): string | null {
+    const user = this.getUser();
+    return user?.role || null;
+  }
+
+  /**
+   * Get tenant ID
+   */
+  getTenantId(): number | null {
+    const user = this.getUser();
+    return user?.tenant_id || null;
+  }
+
+  /**
+   * Check if user has specific role
+   */
+  hasRole(role: string): boolean {
+    const userRole = this.getUserRole();
+    return userRole === role;
+  }
+
+  /**
+   * Check if user is super admin
+   */
+  isSuperAdmin(): boolean {
+    return this.hasRole('SUPER_ADMIN');
+  }
+
+  /**
+   * Check if user is clinic admin
+   */
+  isClinicAdmin(): boolean {
+    return this.hasRole('CLINIC_ADMIN');
+  }
+
+  /**
+   * Check if user is doctor
+   */
+  isDoctor(): boolean {
+    return this.hasRole('DOCTOR');
+  }
 }
 
+// Export singleton instance
 export default new AuthService();

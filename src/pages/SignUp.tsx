@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, ArrowRight, Check, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, Check, AlertCircle, Building2 } from 'lucide-react';
 import authService from '../lib/authService';
+import { getErrorMessage } from '../lib/client';
 
 const SignUp = () => {
   const [formData, setFormData] = useState({
     fullName: '',
+    clinicName: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -32,18 +34,25 @@ const SignUp = () => {
     }
 
     // Validate password requirements
-    const unmetRequirements = passwordRequirements.filter(req => !req.met);
+    const unmetRequirements = passwordRequirements.filter((req) => !req.met);
     if (unmetRequirements.length > 0) {
       setError('Please meet all password requirements');
+      return;
+    }
+
+    // Validate full name
+    if (formData.fullName.trim().split(' ').length < 2) {
+      setError('Please enter your full name (first and last name)');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const response = await authService.signUp({
-        fullName: formData.fullName,
-        email: formData.email,
+      await authService.signUp({
+        fullName: formData.fullName.trim(),
+        clinicName: formData.clinicName.trim() || undefined,
+        email: formData.email.trim(),
         password: formData.password,
       });
 
@@ -51,18 +60,26 @@ const SignUp = () => {
       navigate('/dashboard');
     } catch (err: any) {
       console.error('Signup error:', err);
-      
-      // Handle different error types
+
+      // Extract error message using helper
+      const errorMessage = getErrorMessage(err);
+
+      // Handle specific error cases
       if (err.response?.status === 400) {
-        if (err.response.data?.detail?.includes('email')) {
-          setError('This email is already registered');
+        if (errorMessage.toLowerCase().includes('email')) {
+          setError('This email is already registered. Please use a different email or sign in.');
+        } else if (errorMessage.toLowerCase().includes('slug')) {
+          setError(
+            'This clinic name is already taken. Please choose a different clinic name.'
+          );
         } else {
-          setError(err.response.data?.detail || 'Invalid registration data');
+          setError(errorMessage);
         }
-      } else if (err.response?.data?.detail) {
-        setError(err.response.data.detail);
+      } else if (err.response?.status === 422) {
+        // Validation error
+        setError(errorMessage);
       } else {
-        setError('An error occurred during registration. Please try again.');
+        setError(errorMessage || 'An error occurred during registration. Please try again.');
       }
     } finally {
       setIsLoading(false);
@@ -73,6 +90,7 @@ const SignUp = () => {
     { text: 'At least 8 characters', met: formData.password.length >= 8 },
     { text: 'Contains a number', met: /\d/.test(formData.password) },
     { text: 'Contains uppercase letter', met: /[A-Z]/.test(formData.password) },
+    { text: 'Contains lowercase letter', met: /[a-z]/.test(formData.password) },
   ];
 
   return (
@@ -102,9 +120,12 @@ const SignUp = () => {
 
           {/* Error Alert */}
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 animate-fade-up">
               <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={18} />
-              <p className="text-sm text-red-800">{error}</p>
+              <div className="flex-1">
+                <p className="text-sm text-red-800 font-medium">Registration Failed</p>
+                <p className="text-sm text-red-700 mt-1">{error}</p>
+              </div>
             </div>
           )}
 
@@ -122,7 +143,37 @@ const SignUp = () => {
                 className="input-modern"
                 required
                 disabled={isLoading}
+                autoComplete="name"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Enter your first and last name
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Clinic Name
+                <span className="text-muted-foreground font-normal ml-1">(Optional)</span>
+              </label>
+              <div className="relative">
+                <Building2
+                  size={18}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+                />
+                <input
+                  type="text"
+                  name="clinicName"
+                  value={formData.clinicName}
+                  onChange={handleChange}
+                  placeholder="Smith Medical Center"
+                  className="input-modern pl-12"
+                  disabled={isLoading}
+                  autoComplete="organization"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Leave blank to use your name
+              </p>
             </div>
 
             <div>
@@ -138,6 +189,7 @@ const SignUp = () => {
                 className="input-modern"
                 required
                 disabled={isLoading}
+                autoComplete="email"
               />
             </div>
 
@@ -155,12 +207,14 @@ const SignUp = () => {
                   className="input-modern pr-12"
                   required
                   disabled={isLoading}
+                  autoComplete="new-password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   disabled={isLoading}
+                  tabIndex={-1}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -202,10 +256,22 @@ const SignUp = () => {
                 className="input-modern"
                 required
                 disabled={isLoading}
+                autoComplete="new-password"
               />
-              {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                <p className="mt-2 text-xs text-red-600">Passwords do not match</p>
-              )}
+              {formData.confirmPassword &&
+                formData.password !== formData.confirmPassword && (
+                  <p className="mt-2 text-xs text-red-600 flex items-center gap-1">
+                    <AlertCircle size={12} />
+                    Passwords do not match
+                  </p>
+                )}
+              {formData.confirmPassword &&
+                formData.password === formData.confirmPassword && (
+                  <p className="mt-2 text-xs text-emerald-600 flex items-center gap-1">
+                    <Check size={12} />
+                    Passwords match
+                  </p>
+                )}
             </div>
 
             <label className="flex items-start gap-3 cursor-pointer py-2">
@@ -234,7 +300,10 @@ const SignUp = () => {
               className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Creating account...</span>
+                </div>
               ) : (
                 <>
                   Create Account
@@ -246,10 +315,25 @@ const SignUp = () => {
 
           <p className="text-center text-muted-foreground mt-8">
             Already have an account?{' '}
-            <Link to="/" className="text-secondary font-medium hover:underline">
+            <Link
+              to="/"
+              className="text-secondary font-medium hover:underline"
+              tabIndex={isLoading ? -1 : 0}
+            >
               Sign in
             </Link>
           </p>
+
+          {/* Development Helper */}
+          {import.meta.env.DEV && (
+            <div className="mt-8 p-4 bg-gray-100 rounded-lg text-xs text-gray-600">
+              <p className="font-semibold mb-2">Development Info:</p>
+              <p>API: {import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'}</p>
+              <p className="mt-1">
+                Tenant will be created with slug based on email username
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -280,6 +364,8 @@ const SignUp = () => {
               'Smart appointment scheduling',
               'Comprehensive analytics dashboard',
               'Secure and HIPAA compliant',
+              'AI-powered lead automation',
+              'Multi-channel communication',
             ].map((feature, index) => (
               <li key={index} className="flex items-center gap-3">
                 <div className="w-6 h-6 rounded-full bg-brand-teal/20 flex items-center justify-center">

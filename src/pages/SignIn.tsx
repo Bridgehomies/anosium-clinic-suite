@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react';
 import authService from '../lib/authService';
+import { getErrorMessage } from '../lib/client';
 
 const SignIn = () => {
   const [email, setEmail] = useState('');
@@ -18,7 +19,7 @@ const SignIn = () => {
 
     try {
       await authService.signIn({
-        email: email,
+        email: email.trim(),
         password: password,
       });
 
@@ -26,16 +27,19 @@ const SignIn = () => {
       navigate('/dashboard');
     } catch (err: any) {
       console.error('Login error:', err);
+
+      // Extract error message using helper
+      const errorMessage = getErrorMessage(err);
       
-      // Handle different error types from your backend
+      // Handle specific error cases
       if (err.response?.status === 401) {
         setError('Invalid email or password');
       } else if (err.response?.status === 403) {
-        setError('Account is inactive. Please contact support.');
-      } else if (err.response?.data?.detail) {
-        setError(err.response.data.detail);
+        setError('Your account is inactive. Please contact support.');
+      } else if (err.response?.status === 429) {
+        setError('Too many login attempts. Please try again later.');
       } else {
-        setError('An error occurred. Please try again.');
+        setError(errorMessage);
       }
     } finally {
       setIsLoading(false);
@@ -113,9 +117,12 @@ const SignIn = () => {
 
           {/* Error Alert */}
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 animate-fade-up">
               <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={18} />
-              <p className="text-sm text-red-800">{error}</p>
+              <div className="flex-1">
+                <p className="text-sm text-red-800 font-medium">Login Failed</p>
+                <p className="text-sm text-red-700 mt-1">{error}</p>
+              </div>
             </div>
           )}
 
@@ -132,6 +139,7 @@ const SignIn = () => {
                 className="input-modern"
                 required
                 disabled={isLoading}
+                autoComplete="email"
               />
             </div>
 
@@ -148,12 +156,14 @@ const SignIn = () => {
                   className="input-modern pr-12"
                   required
                   disabled={isLoading}
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   disabled={isLoading}
+                  tabIndex={-1}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -169,9 +179,10 @@ const SignIn = () => {
                 />
                 <span className="text-sm text-muted-foreground">Remember me</span>
               </label>
-              <Link 
-                to="/forgot-password" 
+              <Link
+                to="/forgot-password"
                 className="text-sm text-secondary font-medium hover:underline"
+                tabIndex={isLoading ? -1 : 0}
               >
                 Forgot password?
               </Link>
@@ -183,7 +194,10 @@ const SignIn = () => {
               className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Signing in...</span>
+                </div>
               ) : (
                 <>
                   Sign In
@@ -195,10 +209,22 @@ const SignIn = () => {
 
           <p className="text-center text-muted-foreground mt-8">
             Don't have an account?{' '}
-            <Link to="/signup" className="text-secondary font-medium hover:underline">
+            <Link
+              to="/signup"
+              className="text-secondary font-medium hover:underline"
+              tabIndex={isLoading ? -1 : 0}
+            >
               Sign up
             </Link>
           </p>
+
+          {/* Development Helper */}
+          {import.meta.env.DEV && (
+            <div className="mt-8 p-4 bg-gray-100 rounded-lg text-xs text-gray-600">
+              <p className="font-semibold mb-2">Development Info:</p>
+              <p>API: {import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'}</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
