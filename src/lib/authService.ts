@@ -1,7 +1,7 @@
 /**
  * Authentication Service
  * Handles all authentication-related API calls
- * Updated to match your existing FastAPI backend structure
+ * Updated to match FastAPI backend OpenAPI specification
  */
 
 import apiClient from './client';
@@ -27,6 +27,8 @@ export interface AuthResponse {
 export interface UserResponse {
   id: number;
   email: string;
+  first_name: string;
+  last_name: string;
   full_name: string;
   role: string;
   tenant_id: number | null;
@@ -66,28 +68,38 @@ class AuthService {
   }
 
   /**
-   * Sign up new user
+   * Sign up new user (creates tenant)
    */
   async signUp(data: SignUpData): Promise<UserResponse> {
-    // Transform frontend data to backend format
+    // Split full name into first and last name
+    const nameParts = data.fullName.trim().split(' ');
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(' ') || nameParts[0]; // Use first name as last if only one name provided
+    
+    // Generate slug from email (you might want to make this user-customizable)
+    const slug = data.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '-');
+    
+    // Create tenant (which also creates the admin user)
     const payload = {
+      name: data.fullName + "'s Clinic", // You might want to ask for clinic name separately
       email: data.email,
+      slug: slug,
       password: data.password,
-      full_name: data.fullName,
-      role: 'clinic_admin', // Default role for signup
+      admin_first_name: firstName,
+      admin_last_name: lastName,
     };
 
-    const response = await apiClient.post<UserResponse>('/auth/register', payload);
+    const response = await apiClient.post<any>('/tenants', payload);
     
     // After registration, automatically log in
-    if (response.data.email) {
-      await this.signIn({
-        email: data.email,
-        password: data.password,
-      });
-    }
+    await this.signIn({
+      email: data.email,
+      password: data.password,
+    });
     
-    return response.data;
+    // Return user data (you'll get it from the login flow)
+    const user = this.getUser();
+    return user as UserResponse;
   }
 
   /**
@@ -114,9 +126,10 @@ class AuthService {
       throw new Error('No refresh token available');
     }
 
-    const response = await apiClient.post<TokenResponse>('/auth/refresh', {
-      refresh_token: refreshToken,
-    });
+    // According to the API spec, refresh_token is a query parameter
+    const response = await apiClient.post<TokenResponse>(
+      `/auth/refresh?refresh_token=${encodeURIComponent(refreshToken)}`
+    );
     
     if (response.data.access_token) {
       localStorage.setItem('access_token', response.data.access_token);
@@ -160,10 +173,10 @@ class AuthService {
    * Reset password with token
    */
   async resetPassword(token: string, newPassword: string): Promise<void> {
-    await apiClient.post('/auth/password/reset', {
-      token,
-      new_password: newPassword,
-    });
+    // According to API spec, these are query parameters
+    await apiClient.post(
+      `/auth/password/reset?token=${encodeURIComponent(token)}&new_password=${encodeURIComponent(newPassword)}`
+    );
   }
 
   /**
@@ -180,7 +193,8 @@ class AuthService {
    * Verify email
    */
   async verifyEmail(token: string): Promise<void> {
-    await apiClient.post('/auth/verify-email', { token });
+    // According to API spec, token is a query parameter
+    await apiClient.post(`/auth/verify-email?token=${encodeURIComponent(token)}`);
   }
 
   /**
