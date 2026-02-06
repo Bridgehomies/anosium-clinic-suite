@@ -23,6 +23,10 @@ const Appointments = lazy(() => import("./pages/Appointments"));
 const Visits = lazy(() => import("./pages/Visits"));
 const Services = lazy(() => import("./pages/Services"));
 const Departments = lazy(() => import("./pages/Departments"));
+const Invoices = lazy(() => import("./pages/Invoices"));
+const Payments = lazy(() => import("./pages/Payments"));
+const Analytics = lazy(() => import("./pages/Analytics"));
+const Reports = lazy(() => import("./pages/Reports"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Unauthorized = lazy(() => import("./pages/Unauthorized"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -133,8 +137,7 @@ const App = () => (
                         }
                       />
 
-                      {/* NOTE: Billing routes - Create these pages when ready */}
-                      {/* 
+                      {/* Billing Routes */}
                       <Route
                         path="/billing/invoices"
                         element={
@@ -143,7 +146,6 @@ const App = () => (
                           </ProtectedRoute>
                         }
                       />
-                      
                       <Route
                         path="/billing/payments"
                         element={
@@ -152,7 +154,24 @@ const App = () => (
                           </ProtectedRoute>
                         }
                       />
-                      */}
+
+                      {/* Analytics & Reports */}
+                      <Route
+                        path="/analytics"
+                        element={
+                          <ProtectedRoute allowedRoles={['CLINIC_ADMIN', 'SUPER_ADMIN']}>
+                            <Analytics />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/reports"
+                        element={
+                          <ProtectedRoute allowedRoles={['CLINIC_ADMIN', 'SUPER_ADMIN']}>
+                            <Reports />
+                          </ProtectedRoute>
+                        }
+                      />
 
                       {/* NOTE: AI routes - Create these pages when ready */}
                       {/*
