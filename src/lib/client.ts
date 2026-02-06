@@ -1,6 +1,6 @@
 /**
  * API Client Configuration
- * Axios instance with interceptors for authentication and error handling
+ * Axios instance with interceptors for authentication, tenant headers, and error handling
  */
 
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
@@ -38,14 +38,21 @@ const processQueue = (error: Error | null, token: string | null = null) => {
 
 /**
  * Request Interceptor
- * Adds authorization header to all requests
+ * Adds authorization header and tenant header to all requests
  */
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem('access_token');
+    const tenantId = localStorage.getItem('tenant_id');
 
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    // Add tenant ID header for multi-tenancy
+    // Super admins can override tenant via this header
+    if (tenantId && config.headers) {
+      config.headers['X-Tenant-ID'] = tenantId;
     }
 
     // Log request in development
@@ -53,6 +60,7 @@ apiClient.interceptors.request.use(
       console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, {
         params: config.params,
         data: config.data,
+        tenantId: tenantId || 'none',
       });
     }
 
@@ -169,6 +177,15 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 403) {
       // Account inactive or insufficient permissions
       console.error('Access forbidden:', error.response.data);
+      
+      // Check if it's a tenant-related issue
+      const detail = (error.response.data as any)?.detail;
+      if (typeof detail === 'string') {
+        if (detail.includes('tenant') || detail.includes('inactive')) {
+          // Redirect to appropriate error page
+          window.location.href = '/tenant-inactive';
+        }
+      }
     }
 
     // Handle 429 Too Many Requests (Rate limiting)
