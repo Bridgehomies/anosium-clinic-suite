@@ -12,9 +12,16 @@ import {
   ChevronLeft,
   Menu,
   Shield,
+  FileText,
+  CreditCard,
+  BarChart3,
+  PieChart,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSidebarContext } from '@/contexts/SidebarContext';
+import ClinicSwitcher, { type Clinic } from '@/components/clinic/ClinicSwitcher';
+import { useState } from 'react';
+import { toast } from 'sonner';
 
 const navigation = [
   { name: 'Super Admin', href: '/super-admin', icon: Shield },
@@ -25,11 +32,32 @@ const navigation = [
   { name: 'Visits', href: '/visits', icon: ClipboardList },
   { name: 'Services', href: '/services', icon: Receipt },
   { name: 'Departments', href: '/departments', icon: Building2 },
+  { name: 'Invoices', href: '/billing/invoices', icon: FileText },
+  { name: 'Payments', href: '/billing/payments', icon: CreditCard },
+  { name: 'Analytics', href: '/analytics', icon: PieChart },
+  { name: 'Reports', href: '/reports', icon: BarChart3 },
+];
+
+// Mock clinics for the switcher
+const mockClinics: Clinic[] = [
+  { id: 1, name: 'Downtown Clinic', slug: 'downtown', role: 'Admin', patientCount: 1240, isActive: true },
+  { id: 2, name: 'Westside Medical', slug: 'westside', role: 'Manager', patientCount: 890, isActive: true },
+  { id: 3, name: 'Northpark Health', slug: 'northpark', role: 'Admin', patientCount: 650, isActive: true },
+  { id: 4, name: 'Eastview Center', slug: 'eastview', role: 'Viewer', patientCount: 520, isActive: false },
 ];
 
 const Sidebar = () => {
   const location = useLocation();
   const { collapsed, toggle } = useSidebarContext();
+  const [currentClinic, setCurrentClinic] = useState<Clinic>(mockClinics[0]);
+
+  const handleSwitchClinic = (clinicId: number) => {
+    const clinic = mockClinics.find(c => c.id === clinicId);
+    if (clinic) {
+      setCurrentClinic(clinic);
+      toast.success(`Switched to ${clinic.name}`);
+    }
+  };
 
   return (
     <aside
@@ -61,6 +89,16 @@ const Sidebar = () => {
           )}
         </div>
 
+        {/* Clinic Switcher */}
+        <div className={cn('border-b border-sidebar-border', collapsed ? 'px-2 py-3' : 'px-3 py-3')}>
+          <ClinicSwitcher
+            clinics={mockClinics}
+            currentClinic={currentClinic}
+            onSwitch={handleSwitchClinic}
+            collapsed={collapsed}
+          />
+        </div>
+
         {/* Toggle Button */}
         <button
           onClick={toggle}
@@ -70,7 +108,7 @@ const Sidebar = () => {
         </button>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {navigation.map((item) => {
             const isActive = location.pathname === item.href;
             return (
