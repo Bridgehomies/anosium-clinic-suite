@@ -12,7 +12,7 @@ import { toast } from '@/hooks/use-toast';
 // TYPES
 // ============================================================================
 
-export type UserRole = 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'STAFF';
+export type UserRole = 'SUPER_ADMIN' | 'clinic_admin' | 'DOCTOR' | 'RECEPTIONIST' | 'STAFF';
 
 export interface AuthContextType {
   // State
@@ -230,7 +230,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const isAuthenticated = !!user;
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
-  const isClinicAdmin = user?.role === 'CLINIC_ADMIN' || user?.role === 'SUPER_ADMIN';
+  const isClinicAdmin = user?.role === 'clinic_admin' || user?.role === 'SUPER_ADMIN';
   const isDoctor = user?.role === 'DOCTOR';
 
   // ============================================================================

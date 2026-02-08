@@ -5,7 +5,7 @@
 
 export type UserRole = 
   | 'SUPER_ADMIN' 
-  | 'CLINIC_ADMIN' 
+  | 'clinic_admin' 
   | 'DOCTOR' 
   | 'RECEPTIONIST' 
   | 'STAFF' 
@@ -83,7 +83,7 @@ export interface Permission {
 
 export const RoleHierarchy: Record<UserRole, number> = {
   SUPER_ADMIN: 5,
-  CLINIC_ADMIN: 4,
+  clinic_admin: 4,
   DOCTOR: 3,
   ACCOUNTANT: 2,
   RECEPTIONIST: 2,

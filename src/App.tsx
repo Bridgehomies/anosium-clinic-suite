@@ -81,7 +81,7 @@ const App = () => (
                       <Route
                         path="/patients"
                         element={
-                          <ProtectedRoute allowedRoles={['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST']}>
+                          <ProtectedRoute allowedRoles={['clinic_admin', 'DOCTOR', 'RECEPTIONIST']}>
                             <Patients />
                           </ProtectedRoute>
                         }
@@ -91,7 +91,7 @@ const App = () => (
                       <Route
                         path="/doctors"
                         element={
-                          <ProtectedRoute allowedRoles={['CLINIC_ADMIN']}>
+                          <ProtectedRoute allowedRoles={['clinic_admin']}>
                             <Doctors />
                           </ProtectedRoute>
                         }
@@ -101,7 +101,7 @@ const App = () => (
                       <Route
                         path="/appointments"
                         element={
-                          <ProtectedRoute allowedRoles={['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST']}>
+                          <ProtectedRoute allowedRoles={['clinic_admin', 'DOCTOR', 'RECEPTIONIST']}>
                             <Appointments />
                           </ProtectedRoute>
                         }
@@ -111,7 +111,7 @@ const App = () => (
                       <Route
                         path="/visits"
                         element={
-                          <ProtectedRoute allowedRoles={['DOCTOR', 'CLINIC_ADMIN']}>
+                          <ProtectedRoute allowedRoles={['DOCTOR', 'clinic_admin']}>
                             <Visits />
                           </ProtectedRoute>
                         }
@@ -121,7 +121,7 @@ const App = () => (
                       <Route
                         path="/services"
                         element={
-                          <ProtectedRoute allowedRoles={['CLINIC_ADMIN']}>
+                          <ProtectedRoute allowedRoles={['clinic_admin']}>
                             <Services />
                           </ProtectedRoute>
                         }
@@ -131,7 +131,7 @@ const App = () => (
                       <Route
                         path="/departments"
                         element={
-                          <ProtectedRoute allowedRoles={['CLINIC_ADMIN']}>
+                          <ProtectedRoute allowedRoles={['clinic_admin']}>
                             <Departments />
                           </ProtectedRoute>
                         }
@@ -141,7 +141,7 @@ const App = () => (
                       <Route
                         path="/billing/invoices"
                         element={
-                          <ProtectedRoute allowedRoles={['CLINIC_ADMIN', 'RECEPTIONIST']}>
+                          <ProtectedRoute allowedRoles={['clinic_admin', 'RECEPTIONIST']}>
                             <Invoices />
                           </ProtectedRoute>
                         }
@@ -149,7 +149,7 @@ const App = () => (
                       <Route
                         path="/billing/payments"
                         element={
-                          <ProtectedRoute allowedRoles={['CLINIC_ADMIN', 'RECEPTIONIST']}>
+                          <ProtectedRoute allowedRoles={['clinic_admin', 'RECEPTIONIST']}>
                             <Payments />
                           </ProtectedRoute>
                         }
@@ -159,7 +159,7 @@ const App = () => (
                       <Route
                         path="/analytics"
                         element={
-                          <ProtectedRoute allowedRoles={['CLINIC_ADMIN', 'SUPER_ADMIN']}>
+                          <ProtectedRoute allowedRoles={['clinic_admin', 'SUPER_ADMIN']}>
                             <Analytics />
                           </ProtectedRoute>
                         }
@@ -167,7 +167,7 @@ const App = () => (
                       <Route
                         path="/reports"
                         element={
-                          <ProtectedRoute allowedRoles={['CLINIC_ADMIN', 'SUPER_ADMIN']}>
+                          <ProtectedRoute allowedRoles={['clinic_admin', 'SUPER_ADMIN']}>
                             <Reports />
                           </ProtectedRoute>
                         }
@@ -178,7 +178,7 @@ const App = () => (
                       <Route
                         path="/ai/leads"
                         element={
-                          <ProtectedRoute allowedRoles={['CLINIC_ADMIN', 'RECEPTIONIST']}>
+                          <ProtectedRoute allowedRoles={['clinic_admin', 'RECEPTIONIST']}>
                             <LeadManagement />
                           </ProtectedRoute>
                         }
