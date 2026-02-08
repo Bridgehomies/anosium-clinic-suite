@@ -34,7 +34,7 @@ const navigation = [
   { name: 'Departments', href: '/departments', icon: Building2 },
   { name: 'Invoices', href: '/billing/invoices', icon: FileText },
   { name: 'Payments', href: '/billing/payments', icon: CreditCard },
-  { name: 'Analytics', href: '/analytics', icon: PieChart },
+  
   { name: 'Reports', href: '/reports', icon: BarChart3 },
 ];
 
@@ -71,8 +71,12 @@ const Sidebar = () => {
         <div className="flex h-20 items-center justify-between px-6 border-b border-sidebar-border">
           {!collapsed && (
             <div className="flex items-center gap-3 animate-fade-in">
-              <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center">
-                <span className="text-sidebar-primary-foreground font-bold text-lg">A</span>
+              <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center overflow-hidden">
+                <img 
+                  src="/logo.png" 
+                  alt="AnosiumAI" 
+                  className="w-16 h-16 object-contain"
+                />
               </div>
               <div>
                 <h1 className="font-display font-bold text-lg text-sidebar-foreground">
@@ -83,8 +87,12 @@ const Sidebar = () => {
             </div>
           )}
           {collapsed && (
-            <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center mx-auto">
-              <span className="text-sidebar-primary-foreground font-bold text-lg">A</span>
+            <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center mx-auto overflow-hidden">
+              <img 
+                src="/logo.png" 
+                alt="AnosiumAI" 
+                className="w-8 h-8 object-contain"
+              />
             </div>
           )}
         </div>

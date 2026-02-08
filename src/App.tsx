@@ -25,7 +25,7 @@ const Services = lazy(() => import("./pages/Services"));
 const Departments = lazy(() => import("./pages/Departments"));
 const Invoices = lazy(() => import("./pages/Invoices"));
 const Payments = lazy(() => import("./pages/Payments"));
-const Analytics = lazy(() => import("./pages/Analytics"));
+
 const Reports = lazy(() => import("./pages/Reports"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Unauthorized = lazy(() => import("./pages/Unauthorized"));
@@ -155,15 +155,7 @@ const App = () => (
                         }
                       />
 
-                      {/* Analytics & Reports */}
-                      <Route
-                        path="/analytics"
-                        element={
-                          <ProtectedRoute allowedRoles={['clinic_admin', 'SUPER_ADMIN']}>
-                            <Analytics />
-                          </ProtectedRoute>
-                        }
-                      />
+                      {/* Reports */}
                       <Route
                         path="/reports"
                         element={
