@@ -46,7 +46,7 @@ export interface UserResponse {
   first_name: string;
   last_name: string;
   full_name: string;
-  role: 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'STAFF';
+  role: 'SUPER_ADMIN' | 'clinic_admin' | 'DOCTOR' | 'RECEPTIONIST' | 'STAFF';
   tenant_id: number | null;
   is_active: boolean;
   is_verified: boolean;
@@ -403,7 +403,7 @@ class AuthService {
    * Check if user is clinic admin
    */
   isClinicAdmin(): boolean {
-    return this.hasRole('CLINIC_ADMIN');
+    return this.hasRole('clinic_admin');
   }
 
   /**
