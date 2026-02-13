@@ -12,7 +12,7 @@ import { toast } from '@/hooks/use-toast';
 // TYPES
 // ============================================================================
 
-export type UserRole = 'SUPER_ADMIN' | 'clinic_admin' | 'DOCTOR' | 'RECEPTIONIST' | 'STAFF';
+export type UserRole = 'super_admin' | 'clinic_admin' | 'DOCTOR' | 'RECEPTIONIST' | 'STAFF';
 
 export interface AuthContextType {
   // State

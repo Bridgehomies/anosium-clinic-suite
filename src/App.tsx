@@ -159,7 +159,7 @@ const App = () => (
                       <Route
                         path="/reports"
                         element={
-                          <ProtectedRoute allowedRoles={['clinic_admin', 'SUPER_ADMIN']}>
+                          <ProtectedRoute allowedRoles={['clinic_admin', 'super_admin']}>
                             <Reports />
                           </ProtectedRoute>
                         }
@@ -181,7 +181,7 @@ const App = () => (
                       <Route
                         path="/super-admin"
                         element={
-                          <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                          <ProtectedRoute allowedRoles={['clinic_admin', 'super_admin']}>
                             <SuperAdminDashboard />
                           </ProtectedRoute>
                         }
