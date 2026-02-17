@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { User, Mail, Phone, MapPin, Droplet, AlertCircle, Shield, Calendar } from 'lucide-react';
+import {
+  User, Mail, Phone, MapPin, Droplet,
+  AlertCircle, Shield, Calendar, Users,
+} from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -16,12 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { toast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
 
 interface AddPatientModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd?: (patient: PatientFormData) => void;
+  onAdd?: (patient: PatientFormData) => Promise<void>;
 }
 
 export interface PatientFormData {
@@ -30,6 +33,7 @@ export interface PatientFormData {
   phone: string;
   address: string;
   dob: string;
+  gender: 'male' | 'female' | 'other';
   bloodType: string;
   allergies: string;
   emergencyContact: string;
@@ -52,101 +56,140 @@ const insuranceProviders = [
   'Other',
 ];
 
+const GENDER_OPTIONS: { label: string; value: PatientFormData['gender'] }[] = [
+  { label: 'Male', value: 'male' },
+  { label: 'Female', value: 'female' },
+  { label: 'Other / Prefer not to say', value: 'other' },
+];
+
+// E.164-ish: optional +, then 7–15 digits (spaces/dashes stripped by parent)
+const PHONE_REGEX = /^\+?[\d\s\-().]{7,20}$/;
+
+const STEP_LABELS = ['Personal Info', 'Medical & Emergency', 'Insurance'] as const;
+
+const EMPTY_FORM: PatientFormData = {
+  name: '',
+  email: '',
+  phone: '',
+  address: '',
+  dob: '',
+  gender: 'other',
+  bloodType: '',
+  allergies: '',
+  emergencyContact: '',
+  emergencyPhone: '',
+  insuranceProvider: '',
+  insuranceId: '',
+  notes: '',
+};
+
 const AddPatientModal = ({ open, onOpenChange, onAdd }: AddPatientModalProps) => {
   const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState<PatientFormData>({
-    name: '',
-    email: '',
-    phone: '',
-    address: '',
-    dob: '',
-    bloodType: '',
-    allergies: '',
-    emergencyContact: '',
-    emergencyPhone: '',
-    insuranceProvider: '',
-    insuranceId: '',
-    notes: '',
-  });
+  const [formData, setFormData] = useState<PatientFormData>(EMPTY_FORM);
+  const [errors, setErrors] = useState<Partial<Record<keyof PatientFormData, string>>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const [errors, setErrors] = useState<Partial<PatientFormData>>({});
+  // ── Validation ──────────────────────────────────────────────────────────────
 
-  const validateStep1 = () => {
-    const newErrors: Partial<PatientFormData> = {};
-    
+  const validateStep1 = (): boolean => {
+    const newErrors: Partial<Record<keyof PatientFormData, string>> = {};
+
     if (!formData.name.trim()) newErrors.name = 'Name is required';
+
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Invalid email format';
     }
-    if (!formData.phone.trim()) newErrors.phone = 'Phone is required';
+
+    if (!formData.phone.trim()) {
+      newErrors.phone = 'Phone is required';
+    } else if (!PHONE_REGEX.test(formData.phone)) {
+      newErrors.phone = 'Enter a valid phone number (e.g. +1 555 123 4567)';
+    }
+
     if (!formData.dob) newErrors.dob = 'Date of birth is required';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const validateStep2 = () => {
-    const newErrors: Partial<PatientFormData> = {};
-    
-    if (!formData.emergencyContact.trim()) newErrors.emergencyContact = 'Emergency contact name is required';
-    if (!formData.emergencyPhone.trim()) newErrors.emergencyPhone = 'Emergency contact phone is required';
+  const validateStep2 = (): boolean => {
+    const newErrors: Partial<Record<keyof PatientFormData, string>> = {};
+
+    if (!formData.emergencyContact.trim())
+      newErrors.emergencyContact = 'Emergency contact name is required';
+
+    if (!formData.emergencyPhone.trim()) {
+      newErrors.emergencyPhone = 'Emergency contact phone is required';
+    } else if (!PHONE_REGEX.test(formData.emergencyPhone)) {
+      newErrors.emergencyPhone = 'Enter a valid phone number';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  // ── Navigation ──────────────────────────────────────────────────────────────
+
   const handleNext = () => {
-    if (step === 1 && validateStep1()) {
-      setStep(2);
-    } else if (step === 2 && validateStep2()) {
-      setStep(3);
+    if (step === 1 && validateStep1()) setStep(2);
+    else if (step === 2 && validateStep2()) setStep(3);
+  };
+
+  const handleBack = () => setStep((s) => s - 1);
+
+  // ── Submit ──────────────────────────────────────────────────────────────────
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitError(null);
+    setIsSubmitting(true);
+
+    try {
+      await onAdd?.(formData);
+      // Only reset + close on success
+      resetForm();
+      onOpenChange(false);
+    } catch (err: any) {
+      // onAdd is expected to throw with a human-readable message or an Error
+      const msg =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+          ? err
+          : 'Something went wrong. Please try again.';
+      setSubmitError(msg);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleBack = () => {
-    setStep(step - 1);
+  const resetForm = () => {
+    setFormData(EMPTY_FORM);
+    setErrors({});
+    setSubmitError(null);
+    setStep(1);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    onAdd?.(formData);
-    toast({
-      title: 'Patient Added',
-      description: `${formData.name} has been registered successfully.`,
-    });
-    
-    // Reset form
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      address: '',
-      dob: '',
-      bloodType: '',
-      allergies: '',
-      emergencyContact: '',
-      emergencyPhone: '',
-      insuranceProvider: '',
-      insuranceId: '',
-      notes: '',
-    });
-    setErrors({});
-    setStep(1);
-    onOpenChange(false);
+  const handleClose = (open: boolean) => {
+    if (!open) resetForm();
+    onOpenChange(open);
   };
+
+  // ── Field helpers ───────────────────────────────────────────────────────────
 
   const handleChange = (field: keyof PatientFormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
-    }
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+    if (submitError) setSubmitError(null);
   };
 
+  // ── Render ──────────────────────────────────────────────────────────────────
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl w-[95vw] sm:w-full max-h-[85vh] flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-3 text-lg md:text-xl font-display">
@@ -157,46 +200,63 @@ const AddPatientModal = ({ open, onOpenChange, onAdd }: AddPatientModalProps) =>
           </DialogTitle>
         </DialogHeader>
 
-        {/* Progress Steps */}
-        <div className="flex items-center gap-2 mt-3 flex-shrink-0 px-1">
-          {[1, 2, 3].map((s) => (
-            <div key={s} className="flex-1 flex items-center gap-2">
-              <div
-                className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-xs md:text-sm font-medium transition-colors ${
-                  s <= step
-                    ? 'bg-brand-navy text-white'
-                    : 'bg-muted text-muted-foreground'
-                }`}
-              >
-                {s}
-              </div>
-              {s < 3 && (
+        {/* ── Progress Steps ── */}
+        <div className="mt-3 flex-shrink-0 px-1">
+          {/* Bar + circles */}
+          <div className="flex items-center gap-0">
+            {STEP_LABELS.map((_, idx) => {
+              const s = idx + 1;
+              return (
+                <div key={s} className="flex items-center flex-1 last:flex-none">
+                  <div
+                    className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-xs md:text-sm font-medium transition-colors flex-shrink-0 ${
+                      s <= step ? 'bg-brand-navy text-white' : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    {s}
+                  </div>
+                  {s < STEP_LABELS.length && (
+                    <div
+                      className={`flex-1 h-0.5 md:h-1 rounded mx-1 ${
+                        s < step ? 'bg-brand-navy' : 'bg-muted'
+                      }`}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {/* Labels — pinned under each circle */}
+          <div className="flex mt-1.5">
+            {STEP_LABELS.map((label, idx) => {
+              const s = idx + 1;
+              const isLast = s === STEP_LABELS.length;
+              return (
                 <div
-                  className={`flex-1 h-0.5 md:h-1 rounded ${
-                    s < step ? 'bg-brand-navy' : 'bg-muted'
+                  key={s}
+                  className={`text-xs text-muted-foreground ${
+                    isLast ? 'text-right ml-auto' : s === 1 ? '' : 'flex-1 text-center'
                   }`}
-                />
-              )}
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-between text-xs text-muted-foreground mb-2 px-1 flex-shrink-0">
-          <span>Personal Info</span>
-          <span>Medical & Emergency</span>
-          <span>Insurance</span>
+                >
+                  {label}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-          {/* Scrollable form content */}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden mt-2">
+          {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto px-1 py-2">
-            {/* Step 1: Personal Information */}
+
+            {/* ── Step 1: Personal ── */}
             {step === 1 && (
               <div className="space-y-3 md:space-y-4 animate-fade-up">
                 <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm">
                   <User size={14} className="text-muted-foreground" />
                   Personal Information
                 </h3>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                   <div className="space-y-1.5">
                     <Label htmlFor="name" className="text-sm">Full Name *</Label>
@@ -209,7 +269,7 @@ const AddPatientModal = ({ open, onOpenChange, onAdd }: AddPatientModalProps) =>
                     />
                     {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
                   </div>
-                  
+
                   <div className="space-y-1.5">
                     <Label htmlFor="dob" className="text-sm">Date of Birth *</Label>
                     <div className="relative">
@@ -259,6 +319,27 @@ const AddPatientModal = ({ open, onOpenChange, onAdd }: AddPatientModalProps) =>
                   </div>
                 </div>
 
+                {/* Gender — now collected in the form */}
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Gender *</Label>
+                  <Select
+                    value={formData.gender}
+                    onValueChange={(v) => handleChange('gender', v)}
+                  >
+                    <SelectTrigger className="text-sm">
+                      <Users size={14} className="mr-2 text-muted-foreground flex-shrink-0" />
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[100] bg-popover">
+                      {GENDER_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="space-y-1.5">
                   <Label htmlFor="address" className="text-sm">Address</Label>
                   <div className="relative">
@@ -275,20 +356,20 @@ const AddPatientModal = ({ open, onOpenChange, onAdd }: AddPatientModalProps) =>
               </div>
             )}
 
-            {/* Step 2: Medical & Emergency */}
+            {/* ── Step 2: Medical & Emergency ── */}
             {step === 2 && (
               <div className="space-y-3 md:space-y-4 animate-fade-up">
                 <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm">
                   <AlertCircle size={14} className="text-muted-foreground" />
                   Medical Information
                 </h3>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-sm">Blood Type</Label>
                     <Select
                       value={formData.bloodType}
-                      onValueChange={(value) => handleChange('bloodType', value)}
+                      onValueChange={(v) => handleChange('bloodType', v)}
                     >
                       <SelectTrigger className="text-sm">
                         <Droplet size={14} className="mr-2 text-red-500 flex-shrink-0" />
@@ -331,7 +412,9 @@ const AddPatientModal = ({ open, onOpenChange, onAdd }: AddPatientModalProps) =>
                       onChange={(e) => handleChange('emergencyContact', e.target.value)}
                       className={`text-sm ${errors.emergencyContact ? 'border-destructive' : ''}`}
                     />
-                    {errors.emergencyContact && <p className="text-xs text-destructive">{errors.emergencyContact}</p>}
+                    {errors.emergencyContact && (
+                      <p className="text-xs text-destructive">{errors.emergencyContact}</p>
+                    )}
                   </div>
 
                   <div className="space-y-1.5">
@@ -343,26 +426,28 @@ const AddPatientModal = ({ open, onOpenChange, onAdd }: AddPatientModalProps) =>
                       onChange={(e) => handleChange('emergencyPhone', e.target.value)}
                       className={`text-sm ${errors.emergencyPhone ? 'border-destructive' : ''}`}
                     />
-                    {errors.emergencyPhone && <p className="text-xs text-destructive">{errors.emergencyPhone}</p>}
+                    {errors.emergencyPhone && (
+                      <p className="text-xs text-destructive">{errors.emergencyPhone}</p>
+                    )}
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Step 3: Insurance */}
+            {/* ── Step 3: Insurance ── */}
             {step === 3 && (
               <div className="space-y-3 md:space-y-4 animate-fade-up">
                 <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm">
                   <Shield size={14} className="text-muted-foreground" />
                   Insurance Information
                 </h3>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-sm">Insurance Provider</Label>
                     <Select
                       value={formData.insuranceProvider}
-                      onValueChange={(value) => handleChange('insuranceProvider', value)}
+                      onValueChange={(v) => handleChange('insuranceProvider', v)}
                     >
                       <SelectTrigger className="text-sm">
                         <SelectValue placeholder="Select provider" />
@@ -400,29 +485,54 @@ const AddPatientModal = ({ open, onOpenChange, onAdd }: AddPatientModalProps) =>
                     className="text-sm"
                   />
                 </div>
+
+                {/* API-level submit error shown on the final step */}
+                {submitError && (
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                    <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+                    <p>{submitError}</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          {/* Fixed action buttons at bottom */}
+          {/* ── Fixed action buttons ── */}
           <div className="flex-shrink-0 flex gap-2 md:gap-3 pt-4 mt-2 border-t border-border bg-background">
             {step > 1 ? (
-              <button type="button" onClick={handleBack} className="btn-ghost flex-1 text-sm">
+              <button
+                type="button"
+                onClick={handleBack}
+                disabled={isSubmitting}
+                className="btn-ghost flex-1 text-sm"
+              >
                 Back
               </button>
             ) : (
-              <button type="button" onClick={() => onOpenChange(false)} className="btn-ghost flex-1 text-sm">
+              <button
+                type="button"
+                onClick={() => handleClose(false)}
+                disabled={isSubmitting}
+                className="btn-ghost flex-1 text-sm"
+              >
                 Cancel
               </button>
             )}
-            
+
             {step < 3 ? (
               <button type="button" onClick={handleNext} className="btn-accent flex-1 text-sm">
                 Continue
               </button>
             ) : (
-              <button type="submit" className="btn-accent flex-1 text-sm">
-                Add Patient
+              <button type="submit" disabled={isSubmitting} className="btn-accent flex-1 text-sm">
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin mr-2" />
+                    Saving…
+                  </>
+                ) : (
+                  'Add Patient'
+                )}
               </button>
             )}
           </div>

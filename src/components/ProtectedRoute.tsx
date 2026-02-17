@@ -44,7 +44,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireFeature,
 }) => {
   const location = useLocation();
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  // isSuperAdmin is a pre-computed boolean from AuthContext — no string coercion needed
+  const { user, isAuthenticated, isLoading: authLoading, isSuperAdmin } = useAuth();
   const { currentTenant, isLoading: tenantLoading, hasFeature } = useTenant();
 
   // ============================================================================
@@ -60,7 +61,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // ============================================================================
 
   if (!isAuthenticated || !user) {
-    // Save attempted location for redirect after login
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
@@ -70,17 +70,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   if (allowedRoles && allowedRoles.length > 0) {
     const hasRequiredRole = allowedRoles.includes(user.role as UserRole);
-
     if (!hasRequiredRole) {
-      // User doesn't have required role
       return (
-        <Navigate 
-          to="/unauthorized" 
-          state={{ 
+        <Navigate
+          to="/unauthorized"
+          state={{
             requiredRole: allowedRoles.join(' or '),
-            currentRole: user.role 
-          }} 
-          replace 
+            currentRole: user.role,
+          }}
+          replace
         />
       );
     }
@@ -90,46 +88,42 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // TENANT VALIDATION
   // ============================================================================
 
-  if (requireActiveTenant) {
-    // Super admins can access without tenant
-    if (user.role !== 'SUPER_ADMIN') {
-      if (!currentTenant) {
-        return (
-          <Navigate 
-            to="/no-tenant" 
-            state={{ message: 'No clinic assigned' }}
-            replace 
-          />
-        );
-      }
+  if (requireActiveTenant && !isSuperAdmin) {
+    if (!currentTenant) {
+      return (
+        <Navigate
+          to="/no-tenant"
+          state={{ message: 'No clinic assigned' }}
+          replace
+        />
+      );
+    }
 
-      if (!currentTenant.is_active) {
-        return (
-          <Navigate 
-            to="/tenant-inactive" 
-            state={{ message: 'Your clinic account is inactive' }}
-            replace 
-          />
-        );
-      }
+    if (!currentTenant.is_active) {
+      return (
+        <Navigate
+          to="/tenant-inactive"
+          state={{ message: 'Your clinic account is inactive' }}
+          replace
+        />
+      );
+    }
 
-      // Check subscription status
-      const isSubscriptionActive = 
-        currentTenant.subscription_status === 'ACTIVE' || 
-        currentTenant.subscription_status === 'TRIAL';
+    // Compare lowercase — API returns 'active' | 'trial' | 'suspended' | 'cancelled'
+    const subStatus = (currentTenant.subscription_status ?? '').toLowerCase();
+    const isSubscriptionActive = subStatus === 'active' || subStatus === 'trial';
 
-      if (!isSubscriptionActive) {
-        return (
-          <Navigate 
-            to="/subscription-expired" 
-            state={{ 
-              message: 'Your subscription has expired',
-              status: currentTenant.subscription_status 
-            }}
-            replace 
-          />
-        );
-      }
+    if (!isSubscriptionActive) {
+      return (
+        <Navigate
+          to="/subscription-expired"
+          state={{
+            message: 'Your subscription has expired',
+            status: currentTenant.subscription_status,
+          }}
+          replace
+        />
+      );
     }
   }
 
@@ -137,21 +131,18 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // FEATURE ACCESS CHECK
   // ============================================================================
 
-  if (requireFeature) {
-    // Super admins have access to all features
-    if (user.role !== 'SUPER_ADMIN') {
-      if (!hasFeature(requireFeature)) {
-        return (
-          <Navigate 
-            to="/feature-unavailable" 
-            state={{ 
-              feature: requireFeature,
-              tier: currentTenant?.subscription_tier || 'FREE'
-            }}
-            replace 
-          />
-        );
-      }
+  if (requireFeature && !isSuperAdmin) {
+    if (!hasFeature(requireFeature)) {
+      return (
+        <Navigate
+          to="/feature-unavailable"
+          state={{
+            feature: requireFeature,
+            tier: currentTenant?.subscription_tier ?? 'free',
+          }}
+          replace
+        />
+      );
     }
   }
 

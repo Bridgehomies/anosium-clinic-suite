@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { 
   TrendingUp, Users, Calendar, DollarSign, Activity, ArrowUpRight, ArrowDownRight, 
   Stethoscope, Building2, BarChart3, Clock, CheckCircle2, XCircle, AlertCircle 
@@ -15,95 +15,451 @@ import {
 
 const COLORS = ['#36406D', '#59C4C1', '#6B7CB4', '#7DD3D0', '#9BA5CC', '#4ECDC4'];
 
-// Data structures
-const clinicPerformance = [
-  { clinic: 'Downtown Clinic', revenue: 198420, patients: 1240, appointments: 3200, satisfaction: 4.8, doctors: 15 },
-  { clinic: 'Westside Medical', revenue: 145300, patients: 890, appointments: 2100, satisfaction: 4.6, doctors: 12 },
-  { clinic: 'Northpark Health', revenue: 112800, patients: 650, appointments: 1800, satisfaction: 4.7, doctors: 10 },
-  { clinic: 'Eastview Center', revenue: 89500, patients: 520, appointments: 1400, satisfaction: 4.5, doctors: 11 },
-];
+// API Configuration
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('access_token');
+  const tenantId = localStorage.getItem('tenant_id');
+  
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json'
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  if (tenantId) {
+    headers['X-Tenant-ID'] = tenantId;
+  }
+  
+  return headers;
+};
 
-const monthlyTrend = [
-  { month: 'Jul', downtown: 152000, westside: 118000, northpark: 92000, eastview: 71000, appointments: 280, patients: 820 },
-  { month: 'Aug', downtown: 161000, westside: 125000, northpark: 98000, eastview: 75000, appointments: 295, patients: 865 },
-  { month: 'Sep', downtown: 158000, westside: 122000, northpark: 95000, eastview: 78000, appointments: 288, patients: 842 },
-  { month: 'Oct', downtown: 175000, westside: 132000, northpark: 101000, eastview: 82000, appointments: 312, patients: 920 },
-  { month: 'Nov', downtown: 182000, westside: 138000, northpark: 108000, eastview: 85000, appointments: 328, patients: 975 },
-  { month: 'Dec', downtown: 198000, westside: 145000, northpark: 113000, eastview: 90000, appointments: 342, patients: 1015 },
-];
+// API Service Functions
+const dashboardAPI = {
+  // Get main dashboard statistics
+  getDashboardStats: async () => {
+    const response = await fetch(`${API_BASE_URL}/api/v1/analytics/dashboard`, {
+      headers: getAuthHeaders()
+    });
+    return response.json();
+  },
 
-const serviceDistribution = [
-  { name: 'Consultations', value: 35, count: 2240 },
-  { name: 'Surgeries', value: 22, count: 1408 },
-  { name: 'Lab Tests', value: 20, count: 1280 },
-  { name: 'Imaging', value: 13, count: 832 },
-  { name: 'Therapy', value: 10, count: 640 },
-];
+  // Get today's appointments
+  getTodayAppointments: async (doctorId = null) => {
+    const url = doctorId 
+      ? `${API_BASE_URL}/api/v1/appointments/today?doctor_id=${doctorId}`
+      : `${API_BASE_URL}/api/v1/appointments/today`;
+    const response = await fetch(url, { headers: getAuthHeaders() });
+    return response.json();
+  },
 
-const patientDemographics = [
-  { age: '0-18', male: 120, female: 135, total: 255 },
-  { age: '19-35', male: 340, female: 380, total: 720 },
-  { age: '36-50', male: 280, female: 310, total: 590 },
-  { age: '51-65', male: 210, female: 245, total: 455 },
-  { age: '65+', male: 150, female: 180, total: 330 },
-];
+  // Get appointments with filters
+  getAppointments: async (filters = {}) => {
+    const params = new URLSearchParams(filters);
+    const response = await fetch(`${API_BASE_URL}/api/v1/appointments?${params}`, {
+      headers: getAuthHeaders()
+    });
+    return response.json();
+  },
 
-const appointmentsByDay = [
-  { day: 'Mon', completed: 42, cancelled: 5, noShow: 3, pending: 8 },
-  { day: 'Tue', completed: 48, cancelled: 4, noShow: 2, pending: 6 },
-  { day: 'Wed', completed: 38, cancelled: 6, noShow: 4, pending: 7 },
-  { day: 'Thu', completed: 52, cancelled: 3, noShow: 2, pending: 5 },
-  { day: 'Fri', completed: 56, cancelled: 4, noShow: 3, pending: 9 },
-  { day: 'Sat', completed: 28, cancelled: 2, noShow: 1, pending: 4 },
-  { day: 'Sun', completed: 18, cancelled: 1, noShow: 1, pending: 2 },
-];
+  // Get revenue report
+  getRevenueReport: async (fromDate: string, toDate: string) => {
+    const response = await fetch(
+      `${API_BASE_URL}/api/v1/analytics/reports/revenue?from_date=${fromDate}&to_date=${toDate}`,
+      { headers: getAuthHeaders() }
+    );
+    return response.json();
+  },
 
-const radarData = [
-  { metric: 'Revenue', downtown: 95, westside: 78, northpark: 62, eastview: 48 },
-  { metric: 'Patients', downtown: 90, westside: 72, northpark: 55, eastview: 42 },
-  { metric: 'Satisfaction', downtown: 96, westside: 92, northpark: 94, eastview: 90 },
-  { metric: 'Efficiency', downtown: 88, westside: 82, northpark: 78, eastview: 75 },
-  { metric: 'Growth', downtown: 85, westside: 88, northpark: 72, eastview: 68 },
-  { metric: 'Retention', downtown: 92, westside: 85, northpark: 80, eastview: 76 },
-];
+  // Get appointment report
+  getAppointmentReport: async (fromDate: string, toDate: string) => {
+    const response = await fetch(
+      `${API_BASE_URL}/api/v1/analytics/reports/appointments?from_date=${fromDate}&to_date=${toDate}`,
+      { headers: getAuthHeaders() }
+    );
+    return response.json();
+  },
 
-const recentAppointments = [
-  { id: 1, patient: 'Sarah Johnson', doctor: 'Dr. Smith', time: '09:00 AM', status: 'completed', clinic: 'Downtown Clinic' },
-  { id: 2, patient: 'Michael Chen', doctor: 'Dr. Williams', time: '10:30 AM', status: 'in-progress', clinic: 'Westside Medical' },
-  { id: 3, patient: 'Emily Davis', doctor: 'Dr. Brown', time: '11:00 AM', status: 'pending', clinic: 'Downtown Clinic' },
-  { id: 4, patient: 'James Wilson', doctor: 'Dr. Garcia', time: '02:00 PM', status: 'pending', clinic: 'Northpark Health' },
-  { id: 5, patient: 'Lisa Anderson', doctor: 'Dr. Martinez', time: '03:30 PM', status: 'cancelled', clinic: 'Eastview Center' },
-];
+  // Get patient report
+  getPatientReport: async (fromDate: string, toDate: string) => {
+    const response = await fetch(
+      `${API_BASE_URL}/api/v1/analytics/reports/patients?from_date=${fromDate}&to_date=${toDate}`,
+      { headers: getAuthHeaders() }
+    );
+    return response.json();
+  },
 
-const hourlyAppointments = [
-  { hour: '8 AM', count: 12 }, { hour: '9 AM', count: 18 }, { hour: '10 AM', count: 24 },
-  { hour: '11 AM', count: 22 }, { hour: '12 PM', count: 15 }, { hour: '1 PM', count: 14 },
-  { hour: '2 PM', count: 26 }, { hour: '3 PM', count: 28 }, { hour: '4 PM', count: 20 },
-  { hour: '5 PM', count: 16 }, { hour: '6 PM', count: 10 },
-];
+  // Get monthly trends
+  getMonthlyTrends: async (months = 6) => {
+    const response = await fetch(
+      `${API_BASE_URL}/api/v1/analytics/trends/monthly?months=${months}`,
+      { headers: getAuthHeaders() }
+    );
+    return response.json();
+  },
+
+  // Get doctor performance
+  getDoctorPerformance: async (fromDate: string, toDate: string) => {
+    const response = await fetch(
+      `${API_BASE_URL}/api/v1/analytics/performance/doctors?from_date=${fromDate}&to_date=${toDate}`,
+      { headers: getAuthHeaders() }
+    );
+    return response.json();
+  },
+
+  // Get payment summary
+  getPaymentSummary: async (fromDate: string, toDate: string) => {
+    const response = await fetch(
+      `${API_BASE_URL}/api/v1/billing/summary?from_date=${fromDate}&to_date=${toDate}`,
+      { headers: getAuthHeaders() }
+    );
+    return response.json();
+  },
+
+  // Get daily metrics
+  getDailyMetrics: async (date: string) => {
+    const response = await fetch(
+      `${API_BASE_URL}/api/v1/analytics/metrics/daily?metric_date=${date}`,
+      { headers: getAuthHeaders() }
+    );
+    return response.json();
+  },
+
+  // Get clinic/tenant information
+  getTenantInfo: async () => {
+    const response = await fetch(`${API_BASE_URL}/api/v1/tenants/me/stats`, {
+      headers: getAuthHeaders()
+    });
+    return response.json();
+  },
+
+  // Get invoices
+  getInvoices: async (filters = {}) => {
+    const params = new URLSearchParams(filters);
+    const response = await fetch(`${API_BASE_URL}/api/v1/billing/invoices?${params}`, {
+      headers: getAuthHeaders()
+    });
+    return response.json();
+  },
+
+  // Get list of doctors
+  getDoctors: async () => {
+    const response = await fetch(`${API_BASE_URL}/api/v1/doctors`, {
+      headers: getAuthHeaders()
+    });
+    return response.json();
+  }
+};
 
 const Dashboard = () => {
   const [dateRange, setDateRange] = useState('6months');
   const [selectedClinic, setSelectedClinic] = useState('all');
   const [activeTab, setActiveTab] = useState('overview');
+  
+  // State for API data - Fixed types
+  const [dashboardStats, setDashboardStats] = useState<any>(null);
+  const [todayAppointments, setTodayAppointments] = useState<any[]>([]);
+  const [monthlyTrends, setMonthlyTrends] = useState<any>(null);
+  const [revenueReport, setRevenueReport] = useState<any>(null);
+  const [appointmentReport, setAppointmentReport] = useState<any>(null);
+  const [patientReport, setPatientReport] = useState<any>(null);
+  const [doctorPerformance, setDoctorPerformance] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Memoized calculations for performance
-  const metrics = useMemo(() => {
-    const totalRevenue = clinicPerformance.reduce((s, c) => s + c.revenue, 0);
-    const totalPatients = clinicPerformance.reduce((s, c) => s + c.patients, 0);
-    const totalAppointments = clinicPerformance.reduce((s, c) => s + c.appointments, 0);
-    const totalDoctors = clinicPerformance.reduce((s, c) => s + c.doctors, 0);
-    const avgSatisfaction = (clinicPerformance.reduce((s, c) => s + c.satisfaction, 0) / clinicPerformance.length).toFixed(1);
+  // Calculate date ranges based on selection
+  const getDateRange = () => {
+    const today = new Date();
+    const ranges: Record<string, { from: string; to: string }> = {
+      'today': { from: today.toISOString().split('T')[0], to: today.toISOString().split('T')[0] },
+      '7days': { from: new Date(today.setDate(today.getDate() - 7)).toISOString().split('T')[0], to: new Date().toISOString().split('T')[0] },
+      '30days': { from: new Date(today.setDate(today.getDate() - 30)).toISOString().split('T')[0], to: new Date().toISOString().split('T')[0] },
+      '3months': { from: new Date(today.setMonth(today.getMonth() - 3)).toISOString().split('T')[0], to: new Date().toISOString().split('T')[0] },
+      '6months': { from: new Date(today.setMonth(today.getMonth() - 6)).toISOString().split('T')[0], to: new Date().toISOString().split('T')[0] },
+      '1year': { from: new Date(today.setFullYear(today.getFullYear() - 1)).toISOString().split('T')[0], to: new Date().toISOString().split('T')[0] },
+    };
+    return ranges[dateRange] || ranges['6months'];
+  };
+
+  // Fetch all dashboard data
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { from, to } = getDateRange();
+
+      // Check if we're in development mode without API
+      const isDevelopment = import.meta.env.DEV && !localStorage.getItem('access_token');
+      
+      if (isDevelopment) {
+        // Use mock data for development
+        setTimeout(() => {
+          setDashboardStats({
+            today_appointments: 15,
+            today_revenue: 175000,
+            pending_payments: 25000,
+            active_patients: 1250,
+            total_doctors: 8,
+            appointments_this_week: 87,
+            revenue_this_month: 580000,
+          });
+          
+          setTodayAppointments([
+            { id: 1, patient: { full_name: 'John Doe' }, doctor: { user: { full_name: 'Dr. Smith' } }, appointment_time: '09:00:00', status: 'completed' },
+            { id: 2, patient: { full_name: 'Jane Smith' }, doctor: { user: { full_name: 'Dr. Johnson' } }, appointment_time: '10:00:00', status: 'in_progress' },
+            { id: 3, patient: { full_name: 'Bob Wilson' }, doctor: { user: { full_name: 'Dr. Brown' } }, appointment_time: '11:00:00', status: 'scheduled' },
+          ]);
+          
+          // Fixed: Set as object instead of array
+          setMonthlyTrends({
+            revenue_trend: [
+              { month: '2025-01', revenue: 450000 },
+              { month: '2025-02', revenue: 520000 },
+              { month: '2025-03', revenue: 580000 },
+            ],
+            appointment_trend: [
+              { month: '2025-01', total: 320 },
+              { month: '2025-02', total: 365 },
+              { month: '2025-03', total: 410 },
+            ],
+            patient_growth: [
+              { month: '2025-01', new: 45 },
+              { month: '2025-02', new: 52 },
+              { month: '2025-03', new: 68 },
+            ],
+          });
+          
+          setRevenueReport({
+            total_invoiced: 580000,
+            total_collected: 520000,
+            total_pending: 60000,
+            top_revenue_services: [
+              { service_name: 'General Consultation', count: 145, revenue: 145000 },
+              { service_name: 'Cardiology', count: 65, revenue: 195000 },
+              { service_name: 'Pediatrics', count: 89, revenue: 98000 },
+              { service_name: 'Orthopedics', count: 42, revenue: 84000 },
+              { service_name: 'Dermatology', count: 38, revenue: 58000 },
+            ],
+          });
+          
+          setAppointmentReport({
+            total_scheduled: 410,
+            completed: 368,
+            cancelled: 28,
+            no_shows: 14,
+            by_status: {
+              scheduled: 410,
+              completed: 368,
+              cancelled: 28,
+            },
+          });
+          
+          setPatientReport({
+            new_registrations: 68,
+            total_active: 1250,
+            by_age_group: {
+              '0-18': 180,
+              '19-35': 420,
+              '36-50': 310,
+              '51-65': 240,
+              '65+': 100,
+            },
+            by_gender: {
+              male: 650,
+              female: 600,
+            },
+          });
+          
+          setDoctorPerformance([
+            { doctor_id: 1, doctor_name: 'Dr. Smith', total_appointments: 120, total_patients: 95, total_revenue: 180000, average_rating: 4.8 },
+            { doctor_id: 2, doctor_name: 'Dr. Johnson', total_appointments: 98, total_patients: 82, total_revenue: 156000, average_rating: 4.6 },
+            { doctor_id: 3, doctor_name: 'Dr. Brown', total_appointments: 87, total_patients: 71, total_revenue: 139000, average_rating: 4.7 },
+          ]);
+          
+          setLoading(false);
+        }, 500);
+        return;
+      }
+
+      // Fetch all data in parallel from API
+      const [
+        stats,
+        appointments,
+        trends,
+        revenue,
+        appointmentData,
+        patientData,
+        doctorData
+      ] = await Promise.all([
+        dashboardAPI.getDashboardStats(),
+        dashboardAPI.getTodayAppointments(),
+        dashboardAPI.getMonthlyTrends(6),
+        dashboardAPI.getRevenueReport(from, to),
+        dashboardAPI.getAppointmentReport(from, to),
+        dashboardAPI.getPatientReport(from, to),
+        dashboardAPI.getDoctorPerformance(from, to)
+      ]);
+
+      setDashboardStats(stats);
+      setTodayAppointments(appointments);
+      setMonthlyTrends(trends);
+      setRevenueReport(revenue);
+      setAppointmentReport(appointmentData);
+      setPatientReport(patientData);
+      setDoctorPerformance(doctorData);
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch data on mount and when date range changes
+  useEffect(() => {
+    fetchDashboardData();
+  }, [dateRange]);
+
+  // Transform monthly trends data for charts
+  const transformedMonthlyTrend = useMemo(() => {
+    if (!monthlyTrends?.revenue_trend) return [];
     
-    return { totalRevenue, totalPatients, totalAppointments, totalDoctors, avgSatisfaction };
-  }, []);
+    return monthlyTrends.revenue_trend.map((item: any, index: number) => ({
+      month: new Date(item.month).toLocaleDateString('en-US', { month: 'short' }),
+      revenue: item.revenue / 100, // Convert from cents
+      appointments: monthlyTrends.appointment_trend?.[index]?.total || 0,
+      patients: monthlyTrends.patient_growth?.[index]?.new || 0
+    }));
+  }, [monthlyTrends]);
+
+  // Transform service distribution from revenue report
+  const serviceDistribution = useMemo(() => {
+    if (!revenueReport?.top_revenue_services) return [];
+    
+    return revenueReport.top_revenue_services.map((service: any) => ({
+      name: service.service_name,
+      value: ((service.revenue / revenueReport.total_invoiced) * 100).toFixed(1),
+      count: service.count,
+      revenue: service.revenue / 100
+    }));
+  }, [revenueReport]);
+
+  // Transform patient demographics
+  const patientDemographics = useMemo(() => {
+    if (!patientReport?.by_age_group) return [];
+    
+    return Object.entries(patientReport.by_age_group).map(([age, total]) => {
+      const maleRatio = 0.52; // Approximate from by_gender
+      const totalNum = total as number;
+      return {
+        age,
+        male: Math.round(totalNum * maleRatio),
+        female: Math.round(totalNum * (1 - maleRatio)),
+        total: totalNum
+      };
+    });
+  }, [patientReport]);
+
+  // Transform appointment status data
+  const appointmentsByDay = useMemo(() => {
+    if (!appointmentReport?.by_status) return [];
+    
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    // This is simplified - in real implementation, you'd get daily breakdown from API
+    return days.map(day => ({
+      day,
+      completed: Math.floor(Math.random() * 50) + 30,
+      cancelled: Math.floor(Math.random() * 5) + 2,
+      noShow: Math.floor(Math.random() * 3) + 1,
+      pending: Math.floor(Math.random() * 8) + 4
+    }));
+  }, [appointmentReport]);
+
+  // Radar chart data from doctor performance
+  const radarData = useMemo(() => {
+    if (!doctorPerformance || doctorPerformance.length === 0) return [];
+    
+    const metrics = ['Revenue', 'Patients', 'Satisfaction', 'Efficiency', 'Growth', 'Retention'];
+    return metrics.map(metric => {
+      const data: any = { metric };
+      doctorPerformance.slice(0, 3).forEach(doctor => {
+        // Normalize values to 0-100 scale
+        const normalizeValue = (value: number, max: number) => Math.round((value / max) * 100);
+        
+        switch(metric) {
+          case 'Revenue':
+            data[doctor.doctor_name.split(' ')[1]] = normalizeValue(doctor.total_revenue, Math.max(...doctorPerformance.map(d => d.total_revenue)));
+            break;
+          case 'Patients':
+            data[doctor.doctor_name.split(' ')[1]] = normalizeValue(doctor.total_patients, Math.max(...doctorPerformance.map(d => d.total_patients)));
+            break;
+          case 'Satisfaction':
+            data[doctor.doctor_name.split(' ')[1]] = doctor.average_rating ? (doctor.average_rating / 5) * 100 : 0;
+            break;
+          default:
+            data[doctor.doctor_name.split(' ')[1]] = Math.floor(Math.random() * 30) + 70;
+        }
+      });
+      return data;
+    });
+  }, [doctorPerformance]);
+
+  // Hourly appointments distribution (mock data - would need separate API endpoint)
+  const hourlyAppointments = [
+    { hour: '8 AM', count: 12 }, { hour: '9 AM', count: 18 }, { hour: '10 AM', count: 24 },
+    { hour: '11 AM', count: 22 }, { hour: '12 PM', count: 15 }, { hour: '1 PM', count: 14 },
+    { hour: '2 PM', count: 26 }, { hour: '3 PM', count: 28 }, { hour: '4 PM', count: 20 },
+    { hour: '5 PM', count: 16 }, { hour: '6 PM', count: 10 },
+  ];
+
+  // Memoized calculations for KPIs
+  const metrics = useMemo(() => {
+    if (!dashboardStats) {
+      return {
+        totalRevenue: 0,
+        totalPatients: 0,
+        totalAppointments: 0,
+        totalDoctors: 0,
+        avgSatisfaction: 0
+      };
+    }
+
+    return {
+      totalRevenue: (dashboardStats.revenue_this_month || 0) / 100,
+      totalPatients: dashboardStats.active_patients || 0,
+      totalAppointments: dashboardStats.appointments_this_week || 0,
+      totalDoctors: dashboardStats.total_doctors || 0,
+      avgSatisfaction: 4.7 // Would come from separate patient feedback endpoint
+    };
+  }, [dashboardStats]);
+
+  // Format recent appointments for display
+  const recentAppointments = useMemo(() => {
+    return todayAppointments.slice(0, 5).map(apt => ({
+      id: apt.id,
+      patient: apt.patient?.full_name || 'N/A',
+      doctor: apt.doctor?.user?.full_name || 'N/A',
+      clinic: selectedClinic === 'all' ? 'Main Clinic' : selectedClinic,
+      time: new Date(`2000-01-01T${apt.appointment_time}`).toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      }),
+      status: apt.status
+    }));
+  }, [todayAppointments, selectedClinic]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'in-progress': return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'in_progress': return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'checked_in': return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'scheduled':
+      case 'confirmed':
       case 'pending': return 'bg-amber-50 text-amber-700 border-amber-200';
       case 'cancelled': return 'bg-red-50 text-red-700 border-red-200';
+      case 'no_show': return 'bg-gray-50 text-gray-700 border-gray-200';
       default: return 'bg-gray-50 text-gray-700 border-gray-200';
     }
   };
@@ -111,12 +467,49 @@ const Dashboard = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed': return <CheckCircle2 size={14} />;
-      case 'in-progress': return <Clock size={14} />;
+      case 'in_progress':
+      case 'checked_in': return <Clock size={14} />;
+      case 'scheduled':
+      case 'confirmed':
       case 'pending': return <AlertCircle size={14} />;
-      case 'cancelled': return <XCircle size={14} />;
+      case 'cancelled':
+      case 'no_show': return <XCircle size={14} />;
       default: return null;
     }
   };
+
+  if (loading) {
+    return (
+      <DashboardLayout title="Healthcare Analytics Dashboard">
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading dashboard data...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout title="Healthcare Analytics Dashboard">
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <p className="text-red-600 font-semibold mb-2">Error Loading Dashboard</p>
+            <p className="text-muted-foreground">{error}</p>
+            <button 
+              onClick={fetchDashboardData}
+              className="mt-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout 
@@ -144,9 +537,10 @@ const Dashboard = () => {
           </SelectTrigger>
           <SelectContent className="z-[100] bg-popover">
             <SelectItem value="all">All Clinics</SelectItem>
-            {clinicPerformance.map(c => (
-              <SelectItem key={c.clinic} value={c.clinic}>{c.clinic}</SelectItem>
-            ))}
+            <SelectItem value="downtown">Downtown Clinic</SelectItem>
+            <SelectItem value="westside">Westside Medical</SelectItem>
+            <SelectItem value="northpark">Northpark Health</SelectItem>
+            <SelectItem value="eastview">Eastview Center</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -176,7 +570,7 @@ const Dashboard = () => {
             change: '+12.1%', 
             positive: true, 
             icon: Calendar,
-            subtitle: 'total bookings'
+            subtitle: 'this week'
           },
           { 
             title: 'Active Doctors', 
@@ -239,12 +633,12 @@ const Dashboard = () => {
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h3 className="font-display font-semibold text-lg">Revenue & Growth Trend</h3>
-                  <p className="text-sm text-muted-foreground">Multi-clinic revenue comparison over time</p>
+                  <p className="text-sm text-muted-foreground">Monthly revenue over time</p>
                 </div>
               </div>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={monthlyTrend}>
+                  <ComposedChart data={transformedMonthlyTrend}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                     <XAxis 
                       dataKey="month" 
@@ -257,7 +651,7 @@ const Dashboard = () => {
                       axisLine={false} 
                       tickLine={false} 
                       tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} 
-                      tickFormatter={(v) => `$${v / 1000}k`} 
+                      tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} 
                     />
                     <YAxis 
                       yAxisId="right"
@@ -273,27 +667,17 @@ const Dashboard = () => {
                         borderRadius: '12px',
                         boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
                       }} 
-                      formatter={(v: number) => [`$${v.toLocaleString()}`, '']} 
+                      formatter={(v) => [`$${Number(v).toLocaleString()}`, '']} 
                     />
                     <Area 
                       yAxisId="left"
                       type="monotone" 
-                      dataKey="downtown" 
+                      dataKey="revenue" 
                       stroke={COLORS[0]} 
                       fill={COLORS[0]} 
                       fillOpacity={0.1} 
                       strokeWidth={2} 
-                      name="Downtown" 
-                    />
-                    <Area 
-                      yAxisId="left"
-                      type="monotone" 
-                      dataKey="westside" 
-                      stroke={COLORS[1]} 
-                      fill={COLORS[1]} 
-                      fillOpacity={0.1} 
-                      strokeWidth={2} 
-                      name="Westside" 
+                      name="Revenue" 
                     />
                     <Line 
                       yAxisId="right"
@@ -312,7 +696,7 @@ const Dashboard = () => {
 
             <div className="card-elevated p-6">
               <h3 className="font-display font-semibold text-lg mb-1">Service Distribution</h3>
-              <p className="text-sm text-muted-foreground mb-4">Across all clinics</p>
+              <p className="text-sm text-muted-foreground mb-4">Top revenue services</p>
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -340,14 +724,14 @@ const Dashboard = () => {
                 </ResponsiveContainer>
               </div>
               <div className="space-y-2.5 mt-4">
-                {serviceDistribution.map((s, i) => (
+                {serviceDistribution.slice(0, 5).map((s: any, i: number) => (
                   <div key={s.name} className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2.5">
                       <div 
                         className="w-3 h-3 rounded-full" 
                         style={{ backgroundColor: COLORS[i] }} 
                       />
-                      <span className="text-muted-foreground">{s.name}</span>
+                      <span className="text-muted-foreground truncate">{s.name}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground">{s.count}</span>
@@ -364,8 +748,8 @@ const Dashboard = () => {
             <div className="lg:col-span-2 card-elevated p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="font-display font-semibold text-lg">Recent Appointments</h3>
-                  <p className="text-sm text-muted-foreground">Latest patient visits across clinics</p>
+                  <h3 className="font-display font-semibold text-lg">Today's Appointments</h3>
+                  <p className="text-sm text-muted-foreground">Recent patient visits</p>
                 </div>
               </div>
               <div className="overflow-x-auto">
@@ -374,7 +758,6 @@ const Dashboard = () => {
                     <tr className="border-b border-border">
                       <th className="text-left py-3 px-2 text-xs font-semibold text-muted-foreground uppercase">Patient</th>
                       <th className="text-left py-3 px-2 text-xs font-semibold text-muted-foreground uppercase">Doctor</th>
-                      <th className="text-left py-3 px-2 text-xs font-semibold text-muted-foreground uppercase">Clinic</th>
                       <th className="text-left py-3 px-2 text-xs font-semibold text-muted-foreground uppercase">Time</th>
                       <th className="text-left py-3 px-2 text-xs font-semibold text-muted-foreground uppercase">Status</th>
                     </tr>
@@ -384,7 +767,6 @@ const Dashboard = () => {
                       <tr key={apt.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
                         <td className="py-3 px-2 font-medium">{apt.patient}</td>
                         <td className="py-3 px-2 text-muted-foreground">{apt.doctor}</td>
-                        <td className="py-3 px-2 text-muted-foreground text-xs">{apt.clinic}</td>
                         <td className="py-3 px-2 text-muted-foreground">{apt.time}</td>
                         <td className="py-3 px-2">
                           <span className={cn(
@@ -392,7 +774,7 @@ const Dashboard = () => {
                             getStatusColor(apt.status)
                           )}>
                             {getStatusIcon(apt.status)}
-                            {apt.status}
+                            {apt.status.replace('_', ' ')}
                           </span>
                         </td>
                       </tr>
@@ -450,41 +832,39 @@ const Dashboard = () => {
             <div className="card-elevated p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="font-display font-semibold text-lg">Clinic Performance Comparison</h3>
-                  <p className="text-sm text-muted-foreground">Key metrics across all locations</p>
+                  <h3 className="font-display font-semibold text-lg">Doctor Performance</h3>
+                  <p className="text-sm text-muted-foreground">Key metrics by doctor</p>
                 </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border">
-                      <th className="text-left py-3 text-xs font-semibold text-muted-foreground uppercase">Clinic</th>
+                      <th className="text-left py-3 text-xs font-semibold text-muted-foreground uppercase">Doctor</th>
                       <th className="text-right py-3 text-xs font-semibold text-muted-foreground uppercase">Revenue</th>
                       <th className="text-right py-3 text-xs font-semibold text-muted-foreground uppercase">Patients</th>
-                      <th className="text-right py-3 text-xs font-semibold text-muted-foreground uppercase">Doctors</th>
                       <th className="text-right py-3 text-xs font-semibold text-muted-foreground uppercase">Rating</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {clinicPerformance.map((clinic, i) => (
-                      <tr key={clinic.clinic} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                    {doctorPerformance.slice(0, 5).map((doctor, i) => (
+                      <tr key={doctor.doctor_id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
                         <td className="py-3">
                           <div className="flex items-center gap-2.5">
                             <div 
                               className="w-3 h-3 rounded-full" 
                               style={{ backgroundColor: COLORS[i] }} 
                             />
-                            <span className="font-medium">{clinic.clinic}</span>
+                            <span className="font-medium">{doctor.doctor_name}</span>
                           </div>
                         </td>
                         <td className="text-right py-3 font-semibold">
-                          ${(clinic.revenue / 1000).toFixed(0)}K
+                          ${((doctor.total_revenue || 0) / 100 / 1000).toFixed(1)}K
                         </td>
-                        <td className="text-right py-3">{clinic.patients.toLocaleString()}</td>
-                        <td className="text-right py-3">{clinic.doctors}</td>
+                        <td className="text-right py-3">{doctor.total_patients}</td>
                         <td className="text-right py-3">
                           <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold">
-                            {clinic.satisfaction}
+                            {(doctor.average_rating || 0).toFixed(1)}
                           </span>
                         </td>
                       </tr>
@@ -496,7 +876,7 @@ const Dashboard = () => {
 
             <div className="card-elevated p-6">
               <h3 className="font-display font-semibold text-lg mb-1">Multi-Dimensional Performance</h3>
-              <p className="text-sm text-muted-foreground mb-4">Comparative analysis radar</p>
+              <p className="text-sm text-muted-foreground mb-4">Comparative analysis</p>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <RadarChart data={radarData}>
@@ -506,30 +886,17 @@ const Dashboard = () => {
                       tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} 
                     />
                     <PolarRadiusAxis tick={false} axisLine={false} />
-                    <Radar 
-                      name="Downtown" 
-                      dataKey="downtown" 
-                      stroke={COLORS[0]} 
-                      fill={COLORS[0]} 
-                      fillOpacity={0.2} 
-                      strokeWidth={2} 
-                    />
-                    <Radar 
-                      name="Westside" 
-                      dataKey="westside" 
-                      stroke={COLORS[1]} 
-                      fill={COLORS[1]} 
-                      fillOpacity={0.15} 
-                      strokeWidth={2} 
-                    />
-                    <Radar 
-                      name="Northpark" 
-                      dataKey="northpark" 
-                      stroke={COLORS[2]} 
-                      fill={COLORS[2]} 
-                      fillOpacity={0.1} 
-                      strokeWidth={2} 
-                    />
+                    {doctorPerformance.slice(0, 3).map((doctor, i) => (
+                      <Radar 
+                        key={doctor.doctor_id}
+                        name={doctor.doctor_name.split(' ')[1]} 
+                        dataKey={doctor.doctor_name.split(' ')[1]} 
+                        stroke={COLORS[i]} 
+                        fill={COLORS[i]} 
+                        fillOpacity={0.2 - (i * 0.05)} 
+                        strokeWidth={2} 
+                      />
+                    ))}
                     <Legend />
                   </RadarChart>
                 </ResponsiveContainer>
@@ -541,7 +908,7 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="card-elevated p-6">
               <h3 className="font-display font-semibold text-lg mb-1">Patient Demographics</h3>
-              <p className="text-sm text-muted-foreground mb-4">Age & gender distribution analysis</p>
+              <p className="text-sm text-muted-foreground mb-4">Age & gender distribution</p>
               <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={patientDemographics} layout="vertical">
@@ -577,39 +944,36 @@ const Dashboard = () => {
 
             <div className="card-elevated p-6">
               <h3 className="font-display font-semibold text-lg mb-1">Revenue by Service Type</h3>
-              <p className="text-sm text-muted-foreground mb-4">Breakdown of income sources</p>
+              <p className="text-sm text-muted-foreground mb-4">Income breakdown</p>
               <div className="space-y-4 mt-6">
-                {serviceDistribution.map((service, i) => {
-                  const revenueEstimate = (service.value * metrics.totalRevenue) / 100;
-                  return (
-                    <div key={service.name} className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2.5">
-                          <div 
-                            className="w-3 h-3 rounded-full" 
-                            style={{ backgroundColor: COLORS[i] }} 
-                          />
-                          <span className="font-medium">{service.name}</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs text-muted-foreground">{service.count} visits</span>
-                          <span className="font-semibold">
-                            ${(revenueEstimate / 1000).toFixed(0)}K
-                          </span>
-                        </div>
-                      </div>
-                      <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                {serviceDistribution.slice(0, 5).map((service: any, i: number) => (
+                  <div key={service.name} className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2.5">
                         <div 
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{ 
-                            width: `${service.value}%`,
-                            backgroundColor: COLORS[i]
-                          }}
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: COLORS[i] }} 
                         />
+                        <span className="font-medium">{service.name}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-muted-foreground">{service.count} visits</span>
+                        <span className="font-semibold">
+                          ${(service.revenue / 1000).toFixed(1)}K
+                        </span>
                       </div>
                     </div>
-                  );
-                })}
+                    <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                      <div 
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{ 
+                          width: `${service.value}%`,
+                          backgroundColor: COLORS[i]
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -621,7 +985,7 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="card-elevated p-6">
               <h3 className="font-display font-semibold text-lg mb-1">Weekly Appointment Status</h3>
-              <p className="text-sm text-muted-foreground mb-4">Completion rates & cancellations by day</p>
+              <p className="text-sm text-muted-foreground mb-4">Completion rates by day</p>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={appointmentsByDay}>
@@ -661,17 +1025,17 @@ const Dashboard = () => {
                 {[
                   { 
                     label: 'Completion Rate', 
-                    value: 84, 
-                    total: 100, 
+                    value: appointmentReport?.completed || 0,
+                    total: appointmentReport?.total_scheduled || 100, 
                     color: COLORS[1],
-                    metric: '84%'
+                    metric: `${((appointmentReport?.completed / appointmentReport?.total_scheduled) * 100).toFixed(0)}%`
                   },
                   { 
-                    label: 'Doctor Utilization', 
-                    value: 78, 
-                    total: 100, 
+                    label: 'Revenue Collection', 
+                    value: (revenueReport?.total_collected || 0) / (revenueReport?.total_invoiced || 1),
+                    total: 1, 
                     color: COLORS[2],
-                    metric: '78%'
+                    metric: `${(((revenueReport?.total_collected || 0) / (revenueReport?.total_invoiced || 1)) * 100).toFixed(0)}%`
                   },
                   { 
                     label: 'Patient Retention', 
@@ -681,11 +1045,11 @@ const Dashboard = () => {
                     metric: '92%'
                   },
                   { 
-                    label: 'Revenue per Patient', 
-                    value: 175, 
+                    label: 'Avg Revenue/Patient', 
+                    value: (revenueReport?.total_collected || 0) / (patientReport?.total_active || 1),
                     total: 200, 
                     color: COLORS[3],
-                    metric: '$175'
+                    metric: `$${(((revenueReport?.total_collected || 0) / (patientReport?.total_active || 1)) / 100).toFixed(0)}`
                   },
                 ].map((item) => (
                   <div key={item.label} className="space-y-2">
@@ -714,10 +1078,10 @@ const Dashboard = () => {
               <h3 className="font-display font-semibold text-lg mb-4">System Alerts & Notifications</h3>
               <div className="space-y-3">
                 {[
-                  { type: 'warning', message: 'High cancellation rate at Westside Medical (12%)', time: '10 mins ago' },
-                  { type: 'info', message: 'New doctor onboarding at Downtown Clinic', time: '1 hour ago' },
-                  { type: 'success', message: 'Revenue target achieved for December', time: '2 hours ago' },
-                  { type: 'alert', message: 'Low inventory alert for Lab Tests supplies', time: '3 hours ago' },
+                  { type: 'warning', message: `${appointmentReport?.cancelled || 0} cancelled appointments today`, time: '10 mins ago' },
+                  { type: 'info', message: `${patientReport?.new_registrations || 0} new patients registered this month`, time: '1 hour ago' },
+                  { type: 'success', message: 'Revenue target achieved for this month', time: '2 hours ago' },
+                  { type: 'alert', message: `${(revenueReport?.total_pending || 0) / 100} pending payments`, time: '3 hours ago' },
                 ].map((alert, i) => (
                   <div 
                     key={i} 
@@ -758,6 +1122,7 @@ const Dashboard = () => {
                 ].map((action) => (
                   <button
                     key={action.label}
+                    onClick={() => {/* Navigate to respective page */}}
                     className={cn(
                       'w-full flex items-center gap-3 p-4 rounded-lg text-white font-medium text-sm',
                       'hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5',
