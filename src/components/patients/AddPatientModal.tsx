@@ -20,12 +20,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
+import { Patient } from "@/lib/patientService";
 
 interface AddPatientModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd?: (patient: PatientFormData) => Promise<void>;
+  onAdd?: (patient: PatientFormData) => Promise<Patient>; // 🔧 FIX
+  onCreated?: (patient: Patient) => void;
 }
+
+
 
 export interface PatientFormData {
   name: string;
@@ -83,7 +87,13 @@ const EMPTY_FORM: PatientFormData = {
   notes: '',
 };
 
-const AddPatientModal = ({ open, onOpenChange, onAdd }: AddPatientModalProps) => {
+const AddPatientModal = ({
+    open,
+    onOpenChange,
+    onAdd,
+    onCreated,
+  }: AddPatientModalProps) => {
+
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<PatientFormData>(EMPTY_FORM);
   const [errors, setErrors] = useState<Partial<Record<keyof PatientFormData, string>>>({});
@@ -141,20 +151,22 @@ const AddPatientModal = ({ open, onOpenChange, onAdd }: AddPatientModalProps) =>
   const handleBack = () => setStep((s) => s - 1);
 
   // ── Submit ──────────────────────────────────────────────────────────────────
-
+  
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitError(null);
-    setIsSubmitting(true);
+  e.preventDefault();
+  setSubmitError(null);
+  setIsSubmitting(true);
 
-    try {
-      await onAdd?.(formData);
-      // Only reset + close on success
-      resetForm();
-      onOpenChange(false);
-    } catch (err: any) {
-      // onAdd is expected to throw with a human-readable message or an Error
-      const msg =
+  try {
+    if (!onAdd) return;
+
+    const createdPatient = await onAdd(formData);
+
+    onCreated?.(createdPatient);
+    resetForm();
+    onOpenChange(false);
+  } catch (err: unknown) {
+    const msg =
         err instanceof Error
           ? err.message
           : typeof err === 'string'

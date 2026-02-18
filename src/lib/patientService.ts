@@ -43,6 +43,9 @@ export interface PatientCreate {
   emergency_contact_phone?: string;
   medical_history?: string;
   allergies?: string;
+  notes?: string | null;
+  chronic_conditions?: string | null;
+  referred_by?: string | null;
 }
 
 export interface PatientUpdate {

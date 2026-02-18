@@ -70,6 +70,7 @@ export interface DoctorListParams {
   limit?: number;
   department_id?: number;
   is_active?: boolean;
+  search?: string;  // ✅ Added search parameter
 }
 
 export interface TimeSlot {
@@ -83,10 +84,6 @@ export interface TimeSlot {
 // ============================================================================
 
 class DoctorService {
-  /**
-   * Get paginated list of doctors
-   * Backend: GET /doctors
-   */
   async getDoctors(params?: DoctorListParams): Promise<PaginatedResponse<Doctor>> {
     const response = await apiClient.get<PaginatedResponse<Doctor>>('/doctors', {
       params: {
@@ -94,106 +91,63 @@ class DoctorService {
         limit: params?.limit || 10,
         department_id: params?.department_id,
         is_active: params?.is_active,
+        search: params?.search,  // ✅ Pass search to backend
       },
     });
     return response.data;
   }
 
-  /**
-   * Get single doctor by ID
-   * Backend: GET /doctors/{id}
-   */
   async getDoctor(id: number): Promise<Doctor> {
     const response = await apiClient.get<Doctor>(`/doctors/${id}`);
     return response.data;
   }
 
-  /**
-   * Create new doctor
-   * Backend: POST /doctors
-   */
   async createDoctor(data: DoctorCreate): Promise<Doctor> {
     const response = await apiClient.post<Doctor>('/doctors', data);
     return response.data;
   }
 
-  /**
-   * Update existing doctor
-   * Backend: PUT /doctors/{id}
-   */
   async updateDoctor(id: number, data: DoctorUpdate): Promise<Doctor> {
     const response = await apiClient.put<Doctor>(`/doctors/${id}`, data);
     return response.data;
   }
 
-  /**
-   * Delete doctor
-   * Backend: DELETE /doctors/{id}
-   */
   async deleteDoctor(id: number): Promise<void> {
     await apiClient.delete(`/doctors/${id}`);
   }
 
-  /**
-   * Get doctor's appointments
-   * Backend: GET /doctors/{id}/appointments
-   */
   async getDoctorAppointments(
     id: number,
     startDate?: string,
     endDate?: string
   ): Promise<any[]> {
     const response = await apiClient.get<any[]>(`/doctors/${id}/appointments`, {
-      params: {
-        start_date: startDate,
-        end_date: endDate,
-      },
+      params: { start_date: startDate, end_date: endDate },
     });
     return response.data;
   }
 
-  /**
-   * Get doctor's availability for a specific date
-   * Backend: GET /doctors/{id}/availability
-   */
   async getDoctorAvailability(id: number, date: string): Promise<TimeSlot[]> {
     const response = await apiClient.get<{ available_slots: TimeSlot[] }>(
       `/doctors/${id}/availability`,
-      {
-        params: { date },
-      }
+      { params: { date } }
     );
     return response.data.available_slots;
   }
 
-  /**
-   * Get all active doctors
-   */
   async getActiveDoctors(): Promise<Doctor[]> {
-    const response = await this.getDoctors({
-      is_active: true,
-      limit: 100,
-    });
-    return response.items;
+    const response = await this.getDoctors({ is_active: true, limit: 100 });
+    return response.items ?? [];
   }
 
-  /**
-   * Get doctors by department
-   */
   async getDoctorsByDepartment(departmentId: number): Promise<Doctor[]> {
-    const response = await this.getDoctors({
-      department_id: departmentId,
-      limit: 100,
-    });
-    return response.items;
+    const response = await this.getDoctors({ department_id: departmentId, limit: 100 });
+    return response.items ?? [];
   }
 
-  /**
-   * Get doctors by specialization
-   */
   async getDoctorsBySpecialization(specialization: string): Promise<Doctor[]> {
     const response = await this.getDoctors({ limit: 100 });
-    return response.items.filter(
+    return (response.items ?? []).filter(
       (doctor) => doctor.specialization.toLowerCase() === specialization.toLowerCase()
     );
   }
