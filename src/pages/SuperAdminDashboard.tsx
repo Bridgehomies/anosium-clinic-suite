@@ -343,7 +343,7 @@ const SuperAdminDashboard = () => {
     let csv = '';
     switch (template.id) {
       case 'revenue':
-        csv = 'Date,Revenue\n' + (revenueReport?.daily_breakdown ?? []).map((r: any) => `${r.date},$${(r.revenue / 100).toFixed(2)}`).join('\n');
+        csv = 'Date,Revenue\n' + (revenueReport?.daily_breakdown ?? []).map((r: any) => `${r.date},$${r.revenue.toFixed(2)}`).join('\n');
         break;
       case 'expenses':
         csv = 'Month,Revenue,Expenses,Profit\n' + monthlyConsolidated.map(m => `${m.month},$${m.revenue},$${m.expenses},$${m.profit}`).join('\n');
@@ -498,14 +498,19 @@ const SuperAdminDashboard = () => {
   };
 
   const handleDeleteUser = async (userId: number) => {
-    if (!confirm('Delete this user?')) return;
+    if (!confirm('Delete this user? This cannot be undone!')) return;
     setLoading(prev => ({ ...prev, userAction: userId }));
     try {
       await apiService.deleteUser(userId);
+      // Remove from local state immediately — don't wait for API reload
+      setUsers(prev => prev.filter(u => u.id !== userId));
       toast({ title: 'Success', description: 'User deleted' });
-      loadDashboardData();
-    } catch { toast({ title: 'Error', description: 'Failed to delete', variant: 'destructive' }); }
-    finally { setLoading(prev => ({ ...prev, userAction: null })); }
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.response?.data?.detail || 'Failed to delete user', variant: 'destructive' });
+      loadDashboardData(); // re-sync on error
+    } finally {
+      setLoading(prev => ({ ...prev, userAction: null }));
+    }
   };
 
   const handleToggleUserStatus = async (user: User) => {
@@ -571,10 +576,9 @@ const SuperAdminDashboard = () => {
     if (!monthlyTrends?.revenue_trend?.length) return [];
     return monthlyTrends.revenue_trend.map((r: any) => ({
       month: MONTH_NAMES[r.month] ?? `M${r.month}`,
-      revenue: Math.round((r.revenue ?? 0) / 100),
-      // Backend doesn't expose expenses directly; approximate as 60% of revenue
-      expenses: Math.round(((r.revenue ?? 0) / 100) * 0.6),
-      profit: Math.round(((r.revenue ?? 0) / 100) * 0.4),
+      revenue: Math.round(r.revenue ?? 0),
+      expenses: Math.round((r.revenue ?? 0) * 0.6),
+      profit: Math.round((r.revenue ?? 0) * 0.4),
     }));
   })();
 
@@ -582,16 +586,16 @@ const SuperAdminDashboard = () => {
   const revenueByClinic = clinics
     .filter(c => c.is_active)
     .slice(0, 8)
-    .map(c => ({ clinic: c.name, revenue: Math.round((c.monthly_revenue ?? 0) / 100) }));
+    .map(c => ({ clinic: c.name, revenue: Math.round(c.monthly_revenue ?? 0) }));
 
   // Top services distribution
   const serviceDistributionData = (revenueReport?.top_revenue_services ?? []).map((s: any) => ({
     name: s.service_name,
-    value: Math.round((s.total_revenue ?? s.revenue ?? 0) / 100),
+    value: Math.round(s.total_revenue ?? s.revenue ?? 0),
   }));
 
-  const centsToDisplay = (cents: number) => `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 0 })}`;
-  const centsToK = (cents: number) => `$${((cents / 100) / 1000).toFixed(1)}K`;
+  const centsToDisplay = (amount: number) => `$${amount.toLocaleString('en-US', { minimumFractionDigits: 0 })}`;
+  const centsToK = (amount: number) => `$${(amount / 1000).toFixed(1)}K`;
 
   // ── Guards ────────────────────────────────────────────────────────────────
 
@@ -698,7 +702,8 @@ const SuperAdminDashboard = () => {
                     <Pie data={serviceDistributionData} cx="50%" cy="50%" labelLine={false} label={entry => entry.name} outerRadius={100} dataKey="value">
                       {serviceDistributionData.map((_: any, index: number) => <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip formatter={(v: number) => [`$${v.toLocaleString()}`, 'Revenue']} contentStyle={{ backgroundColor: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', borderRadius: '12px' }} />
+                    <Legend />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
