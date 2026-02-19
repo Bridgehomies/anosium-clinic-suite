@@ -18,6 +18,10 @@ import {
 import doctorService from "@/lib/doctorService";
 import { Doctor } from "@/lib/doctorService";
 
+/** Resolves doctor name regardless of whether API nests it under user or not */
+const getDoctorName = (doctor: Doctor): string =>
+  (doctor as any).user?.full_name ?? doctor.full_name ?? "";
+
 interface DoctorSelectProps {
   value: string;
   onChange: (id: string) => void;
@@ -35,6 +39,8 @@ export default function DoctorSelect({
   const [search, setSearch] = useState("");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(false);
+  // ✅ Cache the selected doctor so its name persists across fetches
+  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -48,7 +54,17 @@ export default function DoctorSelect({
           search: search.trim() || undefined,
         };
         const res = await doctorService.getDoctors(params);
-        if (active) setDoctors(res.items ?? []);
+        if (active) {
+          const items = res.items ?? [];
+          setDoctors(items);
+
+          // ✅ If we have a selected value, try to find and cache the doctor
+          // from the new results (covers initial load with a pre-set value)
+          if (value) {
+            const found = items.find((d) => String(d.id) === value);
+            if (found) setSelectedDoctor(found);
+          }
+        }
       } catch (err) {
         console.error("Failed to load doctors:", err);
       } finally {
@@ -61,11 +77,43 @@ export default function DoctorSelect({
     return () => { active = false; };
   }, [search]);
 
-  const selectedDoctor = doctors.find((d) => String(d.id) === value);
+  // ✅ Also fetch the specific doctor by ID if value changes and we don't have them cached
+  useEffect(() => {
+    if (!value) {
+      setSelectedDoctor(null);
+      return;
+    }
 
-  // Desired display format: "Dr. Muhammad Ali - Cardiology"
-  const displayText = selectedDoctor
-    ? `Dr. ${selectedDoctor.full_name}${selectedDoctor.specialization ? ` - ${selectedDoctor.specialization}` : ""}`
+    // Already cached and matches current value — no need to fetch
+    if (selectedDoctor && String(selectedDoctor.id) === value) return;
+
+    // Check if the doctor is already in the current list
+    const found = doctors.find((d) => String(d.id) === value);
+    if (found) {
+      setSelectedDoctor(found);
+      return;
+    }
+
+    // Not in list — fetch by ID so the name always appears
+    const fetchById = async () => {
+      try {
+        const doctor = await doctorService.getDoctor(Number(value));
+        setSelectedDoctor(doctor ?? null);
+      } catch (err) {
+        console.error("Failed to load selected doctor:", err);
+      }
+    };
+
+    fetchById();
+  }, [value]);
+
+  const formatDoctorLabel = (doctor: Doctor) => {
+    const name = getDoctorName(doctor);
+    return `Dr. ${name}${doctor.specialization ? ` - ${doctor.specialization}` : ""}`;
+  };
+
+  const displayText = value && selectedDoctor
+    ? formatDoctorLabel(selectedDoctor)
     : placeholder;
 
   return (
@@ -111,6 +159,8 @@ export default function DoctorSelect({
                   key={doctor.id}
                   value={String(doctor.id)}
                   onSelect={() => {
+                    // ✅ Cache the selected doctor immediately on selection
+                    setSelectedDoctor(doctor);
                     onChange(String(doctor.id));
                     setOpen(false);
                     setSearch("");
@@ -123,7 +173,7 @@ export default function DoctorSelect({
                     )}
                   />
                   <div className="flex flex-col gap-0.5">
-                    <span className="font-medium">Dr. {doctor.full_name}</span>
+                    <span className="font-medium">Dr. {getDoctorName(doctor)}</span>
                     {doctor.specialization && (
                       <span className="text-xs text-muted-foreground">
                         {doctor.specialization}
