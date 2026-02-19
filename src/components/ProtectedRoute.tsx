@@ -44,7 +44,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireFeature,
 }) => {
   const location = useLocation();
-  // isSuperAdmin is a pre-computed boolean from AuthContext — no string coercion needed
   const { user, isAuthenticated, isLoading: authLoading, isSuperAdmin } = useAuth();
   const { currentTenant, isLoading: tenantLoading, hasFeature } = useTenant();
 
@@ -65,10 +64,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // ============================================================================
-  // ROLE-BASED ACCESS CONTROL (RBAC)
+  // ROLE-BASED ACCESS CONTROL (RBAC) — super_admin bypass
   // ============================================================================
 
-  if (allowedRoles && allowedRoles.length > 0) {
+  if (allowedRoles && allowedRoles.length > 0 && !isSuperAdmin) {
     const hasRequiredRole = allowedRoles.includes(user.role as UserRole);
     if (!hasRequiredRole) {
       return (
@@ -85,7 +84,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // ============================================================================
-  // TENANT VALIDATION
+  // TENANT VALIDATION — super_admin bypass
   // ============================================================================
 
   if (requireActiveTenant && !isSuperAdmin) {
@@ -109,7 +108,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       );
     }
 
-    // Compare lowercase — API returns 'active' | 'trial' | 'suspended' | 'cancelled'
     const subStatus = (currentTenant.subscription_status ?? '').toLowerCase();
     const isSubscriptionActive = subStatus === 'active' || subStatus === 'trial';
 
@@ -128,7 +126,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // ============================================================================
-  // FEATURE ACCESS CHECK
+  // FEATURE ACCESS CHECK — super_admin bypass
   // ============================================================================
 
   if (requireFeature && !isSuperAdmin) {

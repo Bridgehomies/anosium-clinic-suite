@@ -26,7 +26,7 @@ const Departments = lazy(() => import("./pages/Departments"));
 const Invoices = lazy(() => import("./pages/Invoices"));
 const Payments = lazy(() => import("./pages/Payments"));
 
-const Reports = lazy(() => import("./pages/Reports"));
+
 const Settings = lazy(() => import("./pages/Settings"));
 const Unauthorized = lazy(() => import("./pages/Unauthorized"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -155,15 +155,7 @@ const App = () => (
                         }
                       />
 
-                      {/* Reports */}
-                      <Route
-                        path="/reports"
-                        element={
-                          <ProtectedRoute allowedRoles={['clinic_admin', 'SUPER_ADMIN']}>
-                            <Reports />
-                          </ProtectedRoute>
-                        }
-                      />
+                     
 
                       {/* NOTE: AI routes - Create these pages when ready */}
                       {/*
