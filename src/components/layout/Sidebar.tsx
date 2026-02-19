@@ -35,7 +35,6 @@ const navigation = [
   { name: 'Invoices', href: '/billing/invoices', icon: FileText },
   { name: 'Payments', href: '/billing/payments', icon: CreditCard },
   
-  { name: 'Reports', href: '/reports', icon: BarChart3 },
 ];
 
 // Mock clinics for the switcher
