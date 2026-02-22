@@ -21,7 +21,7 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   accessToken: string | null;        // ← exposed so components don't touch localStorage directly
-
+  tenantId: number | null;
   // Actions
   login: (credentials: LoginCredentials) => Promise<void>;
   signup: (data: SignUpData) => Promise<void>;
@@ -249,6 +249,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isSuperAdmin = normaliseRole(user?.role) === 'super_admin';
   const isClinicAdmin = normaliseRole(user?.role) === 'clinic_admin' || isSuperAdmin;
   const isDoctor = normaliseRole(user?.role) === 'doctor';
+  const tenantId = user?.tenant_id ?? null;
 
   // ============================================================================
   // CONTEXT VALUE
@@ -259,6 +260,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAuthenticated,
     isLoading,
     accessToken,
+    tenantId,   
     login,
     signup,
     logout,
@@ -284,7 +286,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    // Return safe defaults during initialization instead of throwing
+    return {
+      user: null,
+      isAuthenticated: false,
+      isLoading: true,
+      accessToken: null,
+      tenantId: null,
+      login: async () => {},
+      signup: async () => {},
+      logout: async () => {},
+      refreshUser: async () => {},
+      hasRole: () => false,
+      hasAnyRole: () => false,
+      isSuperAdmin: false,
+      isClinicAdmin: false,
+      isDoctor: false,
+    };
   }
   return context;
 };

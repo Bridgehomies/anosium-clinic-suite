@@ -264,11 +264,21 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
 export const useTenant = (): TenantContextType => {
   const context = useContext(TenantContext);
-  
   if (context === undefined) {
-    throw new Error('useTenant must be used within a TenantProvider');
+    return {
+      currentTenant: null,
+      tenants: [],
+      isLoading: false,
+      fetchCurrentTenant: async () => {},
+      fetchTenantStats: async () => null,
+      switchTenant: () => {},
+      updateTenant: async () => {},
+      hasFeature: () => false,
+      isFeatureEnabled: () => false,
+      isSubscriptionActive: false,
+      subscriptionTier: 'FREE',
+    };
   }
-  
   return context;
 };
 

@@ -256,6 +256,12 @@ class AuthService {
     try {
       const user = await this.getCurrentUser();
       localStorage.setItem('user', JSON.stringify(user));
+      // ← ADD THIS: so apiClient sends X-Tenant-ID automatically
+      if (user.tenant_id) {
+        localStorage.setItem('tenant_id', String(user.tenant_id));
+      } else {
+        localStorage.removeItem('tenant_id'); // super_admin has no tenant
+      }
     } catch (error) {
       console.error('Error fetching user data:', error);
     }
@@ -337,6 +343,8 @@ class AuthService {
     return !!(token && user);
   }
 
+  
+
   /**
    * Get stored user
    */
@@ -366,6 +374,7 @@ class AuthService {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
+    localStorage.removeItem('tenant_id'); // ← ADD THIS
   }
 
   /**
