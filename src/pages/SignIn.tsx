@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react';
-import authService from '../lib/authService';
+import { useAuth } from '../contexts/AuthContext';
+
 import { getErrorMessage } from '../lib/client';
 
 const SignIn = () => {
@@ -10,7 +11,8 @@ const SignIn = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const navigate = useNavigate();
+  const { login } = useAuth();
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,20 +20,15 @@ const SignIn = () => {
     setError('');
 
     try {
-      await authService.signIn({
+      await login({
         email: email.trim(),
         password: password,
       });
-
-      // Success - navigate to dashboard
-      navigate('/dashboard');
+      // login() already navigates on success — nothing else to do here
     } catch (err: any) {
       console.error('Login error:', err);
-
-      // Extract error message using helper
       const errorMessage = getErrorMessage(err);
-      
-      // Handle specific error cases
+
       if (err.response?.status === 401) {
         setError('Invalid email or password');
       } else if (err.response?.status === 403) {

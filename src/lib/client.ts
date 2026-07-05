@@ -99,8 +99,18 @@ apiClient.interceptors.response.use(
       });
     }
 
+    // FIX #2: Don't intercept auth errors on login/signup/tenant-creation
+    // endpoints. A failed login (wrong password, 401) is not an expired-
+    // session case — without this, it would incorrectly trigger the
+    // refresh-and-retry flow below, and could force a redirect to '/' while
+    // the user is still sitting on the sign-in page.
+    const isAuthEndpoint =
+      originalRequest?.url?.includes('/auth/login') ||
+      originalRequest?.url?.includes('/auth/signup') ||
+      originalRequest?.url?.includes('/tenants');
+
     // Handle 401 Unauthorized - Token expired
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       if (isRefreshing) {
         // If already refreshing, queue this request
         return new Promise((resolve, reject) => {
@@ -123,17 +133,24 @@ apiClient.interceptors.response.use(
       const refreshToken = localStorage.getItem('refresh_token');
 
       if (!refreshToken) {
-        // No refresh token, redirect to login
-        localStorage.clear();
-        window.location.href = '/';
+        // No refresh token — only redirect if not already on an auth page
+        const currentPath = window.location.pathname;
+        if (!currentPath.includes('/signin') && !currentPath.includes('/signup') && currentPath !== '/') {
+          localStorage.clear();
+          window.location.href = '/';
+        }
+        isRefreshing = false;
         return Promise.reject(error);
       }
 
       try {
-        // Refresh the token
+        // FIX #1: refresh_token now sent in the JSON body, matching the
+        // backend's Body(..., embed=True) contract — it no longer reads
+        // this from the query string, so the old ?refresh_token=... call
+        // would 422 on every refresh attempt.
         const response = await axios.post(
-          `${API_BASE_URL}/auth/refresh?refresh_token=${encodeURIComponent(refreshToken)}`,
-          {},
+          `${API_BASE_URL}/auth/refresh`,
+          { refresh_token: refreshToken },
           {
             headers: {
               'Content-Type': 'application/json',
@@ -166,11 +183,21 @@ apiClient.interceptors.response.use(
         processQueue(refreshError as Error, null);
         isRefreshing = false;
 
-        localStorage.clear();
-        window.location.href = '/';
+        const currentPath = window.location.pathname;
+        if (!currentPath.includes('/signin') && !currentPath.includes('/signup') && currentPath !== '/') {
+          localStorage.clear();
+          window.location.href = '/';
+        }
 
         return Promise.reject(refreshError);
       }
+    }
+
+    // For auth endpoints, just reject without redirecting — let the calling
+    // component (e.g. the sign-in form) show its own error message instead
+    // of this interceptor yanking the user away from the page they're on.
+    if (isAuthEndpoint && error.response?.status === 401) {
+      return Promise.reject(error);
     }
 
     // Handle 403 Forbidden
@@ -182,8 +209,10 @@ apiClient.interceptors.response.use(
       const detail = (error.response.data as any)?.detail;
       if (typeof detail === 'string') {
         if (detail.includes('tenant') || detail.includes('inactive')) {
-          // Redirect to appropriate error page
-          window.location.href = '/tenant-inactive';
+          const currentPath = window.location.pathname;
+          if (!currentPath.includes('/signin') && !currentPath.includes('/signup')) {
+            window.location.href = '/tenant-inactive';
+          }
         }
       }
     }

@@ -44,7 +44,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireFeature,
 }) => {
   const location = useLocation();
-  const { user, isAuthenticated, isLoading: authLoading, isSuperAdmin } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, isSuperAdmin, hasAnyRole } = useAuth();
   const { currentTenant, isLoading: tenantLoading, hasFeature } = useTenant();
 
   // ============================================================================
@@ -68,7 +68,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // ============================================================================
 
   if (allowedRoles && allowedRoles.length > 0 && !isSuperAdmin) {
-    const hasRequiredRole = allowedRoles.includes(user.role as UserRole);
+    // FIX #5: use AuthContext's hasAnyRole(), which normalizes casing via
+    // normaliseRole(), instead of a raw `allowedRoles.includes(user.role)`.
+    // The raw check is case-sensitive — since the backend's role values are
+    // all lowercase but allowedRoles arrays in App.tsx use a mix of casing
+    // (e.g. 'DOCTOR', 'RECEPTIONIST'), a plain includes() silently locks out
+    // real Doctors/Receptionists even though the roles "match" conceptually.
+    const hasRequiredRole = hasAnyRole(allowedRoles);
+
     if (!hasRequiredRole) {
       return (
         <Navigate

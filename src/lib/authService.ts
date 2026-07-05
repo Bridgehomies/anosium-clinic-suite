@@ -40,13 +40,16 @@ export interface AuthResponse {
   expires_in: number;
 }
 
+// FIX #4: matches the backend's actual UserRole enum values exactly
+// (models/user.py — all lowercase). Also added the previously-missing
+// 'accountant' role.
 export interface UserResponse {
   id: number;
   email: string;
   first_name: string;
   last_name: string;
   full_name: string;
-  role: 'SUPER_ADMIN' | 'clinic_admin' | 'DOCTOR' | 'RECEPTIONIST' | 'STAFF';
+  role: 'super_admin' | 'clinic_admin' | 'doctor' | 'receptionist' | 'staff' | 'accountant';
   tenant_id: number | null;
   is_active: boolean;
   is_verified: boolean;
@@ -174,11 +177,11 @@ class AuthService {
   /**
    * Sign out from specific device
    * Backend: POST /auth/logout-device
-   * Query params: ?refresh_token={token}
+   * Body: {refresh_token}
    */
   async signOutDevice(refreshToken: string): Promise<void> {
     try {
-      await apiClient.post(`/auth/logout-device?refresh_token=${encodeURIComponent(refreshToken)}`);
+      await apiClient.post('/auth/logout-device', { refresh_token: refreshToken });
     } catch (error) {
       console.error('Logout device error:', error);
       throw error;
@@ -188,7 +191,7 @@ class AuthService {
   /**
    * Refresh access token
    * Backend: POST /auth/refresh
-   * Query params: ?refresh_token={token}
+   * Body: {refresh_token}
    */
   async refreshToken(): Promise<AuthResponse> {
     const refreshToken = localStorage.getItem('refresh_token');
@@ -199,7 +202,8 @@ class AuthService {
 
     try {
       const response = await apiClient.post<AuthResponse>(
-        `/auth/refresh?refresh_token=${encodeURIComponent(refreshToken)}`
+        '/auth/refresh',
+        { refresh_token: refreshToken }
       );
 
       if (response.data.access_token) {
@@ -256,7 +260,8 @@ class AuthService {
     try {
       const user = await this.getCurrentUser();
       localStorage.setItem('user', JSON.stringify(user));
-      // ← ADD THIS: so apiClient sends X-Tenant-ID automatically
+      // So apiClient sends X-Tenant-ID automatically (backend reads this
+      // header in api/deps.py for super-admin tenant overrides).
       if (user.tenant_id) {
         localStorage.setItem('tenant_id', String(user.tenant_id));
       } else {
@@ -284,15 +289,14 @@ class AuthService {
   /**
    * Reset password with token
    * Backend: POST /auth/password/reset
-   * Query params: ?token={token}&new_password={password}
+   * Body: {token, new_password}
    */
   async resetPassword(token: string, newPassword: string): Promise<void> {
     try {
-      await apiClient.post(
-        `/auth/password/reset?token=${encodeURIComponent(token)}&new_password=${encodeURIComponent(
-          newPassword
-        )}`
-      );
+      await apiClient.post('/auth/password/reset', {
+        token,
+        new_password: newPassword,
+      });
     } catch (error) {
       console.error('Reset password error:', error);
       throw error;
@@ -319,11 +323,11 @@ class AuthService {
   /**
    * Verify email
    * Backend: POST /auth/verify-email
-   * Query params: ?token={token}
+   * Body: {token}
    */
   async verifyEmail(token: string): Promise<void> {
     try {
-      await apiClient.post(`/auth/verify-email?token=${encodeURIComponent(token)}`);
+      await apiClient.post('/auth/verify-email', { token });
     } catch (error) {
       console.error('Verify email error:', error);
       throw error;
@@ -342,8 +346,6 @@ class AuthService {
     const user = localStorage.getItem('user');
     return !!(token && user);
   }
-
-  
 
   /**
    * Get stored user
@@ -374,7 +376,7 @@ class AuthService {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
-    localStorage.removeItem('tenant_id'); // ← ADD THIS
+    localStorage.removeItem('tenant_id');
   }
 
   /**
@@ -405,7 +407,7 @@ class AuthService {
    * Check if user is super admin
    */
   isSuperAdmin(): boolean {
-    return this.hasRole('SUPER_ADMIN');
+    return this.hasRole('super_admin');
   }
 
   /**
@@ -419,7 +421,28 @@ class AuthService {
    * Check if user is doctor
    */
   isDoctor(): boolean {
-    return this.hasRole('DOCTOR');
+    return this.hasRole('doctor');
+  }
+
+  /**
+   * Check if user is receptionist
+   */
+  isReceptionist(): boolean {
+    return this.hasRole('receptionist');
+  }
+
+  /**
+   * Check if user is staff
+   */
+  isStaff(): boolean {
+    return this.hasRole('staff');
+  }
+
+  /**
+   * Check if user is accountant
+   */
+  isAccountant(): boolean {
+    return this.hasRole('accountant');
   }
 }
 
